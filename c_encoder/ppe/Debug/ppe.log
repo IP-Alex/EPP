@@ -1,0 +1,12 @@
+﻿  main.cpp
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(26): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(317): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(318): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(319): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(321): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(322): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(326): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(327): warning C4305: 'argument': truncation from 'double' to 'float'
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/PROFILE' specification
+custom_types.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:REF' specification
+  ppe.vcxproj -> C:\Users\alla7073\Documents\video_compression\c_encoder\Debug\ppe.exe
