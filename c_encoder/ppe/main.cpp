@@ -13,8 +13,12 @@
 #include "gettimeofday.h"
 #include "config.h"
 #include <immintrin.h>
+#include "opencl_helper.h"
   
 using namespace std;
+
+
+
 
 void loadImage(int number, string path, Image** photo) {
     string filename;
@@ -1064,6 +1068,10 @@ int encode() {
  
  
 int main(int args, char** argv){
+	cl_device_id _1;
+	cl_context _2;
+	cl_command_queue _3;
+	setup_cl(&_1, &_2, &_3);
     encode();
     return 0;
 }
