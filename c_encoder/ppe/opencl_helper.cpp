@@ -59,7 +59,7 @@ char* load_kernel_file(const char* filename) {
 	struct stat file_info;
 	int error_code = stat(filename, &file_info);
 
-	if (error_code) {
+	if (error_code != 0) {
 		printf("[ERROR] - Get file failed. Error: %s", filename);
 		exit(-1);
 	}
@@ -82,7 +82,6 @@ char* load_kernel_file(const char* filename) {
 
 void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel, cl_program* program_cl) {
 	cl_int error;
-	
 	char* program_text = load_kernel_file("kernel.cl");
 
 	*program_cl = clCreateProgramWithSource(*context, 1, (const char**)&program_text, NULL, &error);
@@ -106,28 +105,31 @@ void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel
 	free(program_text);
 }
 
+/*
 void kernel_init(cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context) {
-	*in_buffer = clCreateBuffer(*context, CL_MEM_READ_ONLY, SIZE_BYTES, NULL, NULL);
-	*out_buffer = clCreateBuffer(*context, CL_MEM_READ_ONLY, SIZE_BYTES, NULL, NULL);
+	*in_buffer = clCreateBuffer(*context, CL_MEM_READ_WRITE, SIZE_BYTES*3, NULL, NULL);
+	*out_buffer = clCreateBuffer(*context, CL_MEM_READ_WRITE, SIZE_BYTES*3, NULL, NULL);
 }
+*/
 
-
+/*
 void kernel_calculate(cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context, 
-					  cl_command_queue* queue, cl_kernel* kernel, size_t global_dimension[],
-					  float* in, float* out) {
-
-	clEnqueueWriteBuffer(*queue, *in_buffer, CL_FALSE, 0, SIZE_BYTES, in, 0, NULL, NULL);
-	clEnqueueWriteBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES, out, 0, NULL, NULL);
+					  cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension,
+					  float* in_r, float* in_g, float* in_b, float* out_r, float* out_g, float* out_b) {
+	
+	clEnqueueWriteBuffer(*queue, *in_buffer, CL_FALSE, 0, SIZE_BYTES*3, in, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES*3, out, 0, NULL, NULL);
 
 	clSetKernelArg(*kernel, 0, sizeof(*in_buffer), in_buffer);
-	clSetKernelArg(*kernel, 0, sizeof(*out_buffer), in_buffer);
+	clSetKernelArg(*kernel, 1, sizeof(*out_buffer), out_buffer);
 
 	clEnqueueNDRangeKernel(*queue, *kernel, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
 
-	clEnqueueReadBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES, out, 0, NULL, NULL);
+	clEnqueueReadBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES*3, out, 0, NULL, NULL);
 
 	clFinish(*queue);
 }
+*/
 
 void cleanup(cl_kernel* kernel, cl_program* program) {
 	//clReleaseMemObject(out_buffer);

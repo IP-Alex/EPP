@@ -17,6 +17,7 @@
   
 using namespace std;
 
+#define print false
 
 void loadImage(int number, string path, Image** photo) {
     string filename;
@@ -62,16 +63,16 @@ void loadImage(int number, string path, Image** photo) {
      
 }
 #define gpu 1
-#define mode gpu
+#define normal 2
+#define mode normal
 #define _CORES 1
-void convertRGBtoYCbCr(Image* in, Image* out, cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context, 
-						cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension, 
-						float* f_in, float* f_out){
 
-#if mode != gpu
+// in_r, in_g, in_b, out_r, out_g, out_b
+void convertRGBtoYCbCr(Image* in, Image* out) {
+
     int width = in->width;
     int height = in->height;
-#endif
+
 		/*
 			IMPROVEMENT: Flip x and y loop. 
 			Look for conflicts between R,G and B CLs.
@@ -317,7 +318,6 @@ void convertRGBtoYCbCr(Image* in, Image* out, cl_mem* in_buffer, cl_mem* out_buf
 								_mm256_store_ps(&out->bc->data[x*width + y], resultCr);
 #endif
 
-
 #ifdef CS
 								const __m256 Y299 = _mm256_set1_ps(0.299);
 								const __m256 Y587 = _mm256_set1_ps(0.587);
@@ -425,7 +425,7 @@ void convertRGBtoYCbCr(Image* in, Image* out, cl_mem* in_buffer, cl_mem* out_buf
 					out->bc->data[x*width + y] = Cr;
 #endif
 
-#ifdef normal
+#if mode == normal
 
 		for (int y = 0; y<width; y++) {
 			for (int x = 0; x<height; x++) {
@@ -439,20 +439,8 @@ void convertRGBtoYCbCr(Image* in, Image* out, cl_mem* in_buffer, cl_mem* out_buf
 				out->gc->data[x*width + y] = Cb;
 				out->bc->data[x*width + y] = Cr;
 			}
-			}
+		}
 #endif
-
-#if mode == gpu
-
-		kernel_calculate(in_buffer, out_buffer, context,
-						queue, kernel, global_dimension, f_in, f_out);
-
-#endif
-
-        
-    
-     
-    //return out;
 }
 
 Channel* lowPass(Channel* in, Channel* out){
@@ -466,11 +454,9 @@ Channel* lowPass(Channel* in, Channel* out){
 	int width = in->width; 
 	int height = in->height;
      
-    //out = in; TODO Is this necessary? A: No? or is there a corner case somewhere?
+    //out = in; TODO Is this necessary?
 	for(int i=0; i<width*height; i++) out->data[i] =in->data[i];
      
-     
-	//A: I think we can do both copies in one of the loops.
     // In X
     for (int y=1; y<(width-1); y++) {
         for (int x=1; x<(height-1); x++) {
@@ -599,7 +585,7 @@ Channel* downSample(Channel* in){
 		IMPROVENT: Flip x and y loop.
 		SIMD: Ta fyra, skicka över.
 	*/
-#ifdef normal
+#if mode == normal || mode == gpu
 	for(int y2=0,y=0; y2<w2; y2++) {
 		for (int x2 = 0, x = 0; x2<h2; x2++) {
 			out->data[x2*w2+y2]= in->data[x*width+y];
@@ -608,7 +594,6 @@ Channel* downSample(Channel* in){
         y+=2;
     }
 #endif
-
 #ifdef PSIMD
 
 #pragma omp parallel num_threads(_CORES) for
@@ -620,7 +605,6 @@ Channel* downSample(Channel* in){
 		y += 2;
 	}
 #endif
-
 #ifdef PC
 #pragma omp parallel num_threads(_CORES) for
 	for (int x2 = 0, x = 0; x2<h2; x2++) {
@@ -631,8 +615,6 @@ Channel* downSample(Channel* in){
 		x += 2;
 	}
 #endif
-
-
 #ifdef CS
 	for (int x2 = 0, x = 0; x2<h2; x2++) {
 		for (int y2 = 0, y = 0; y2<w2; y2++) {
@@ -642,7 +624,6 @@ Channel* downSample(Channel* in){
 		x += 2;
 	}
 #endif
-
 #ifdef PCS
 #pragma omp parallel num_threads(_CORES) for
 	for (int x2 = 0, x = 0; x2<h2; x2++) {
@@ -654,7 +635,6 @@ Channel* downSample(Channel* in){
 	}
 #endif
 
- 
     return out;
 }
 
@@ -844,6 +824,81 @@ void encode8x8(Channel* ordered, SMatrix* encoded){
     }
 }
 
+void gpu_convertRGBtoYCbCr(
+	Image* in, Image* out,
+	cl_mem* in_r_buffer, cl_mem* in_g_buffer, cl_mem* in_b_buffer, cl_mem* out_r_buffer, cl_mem* out_g_buffer, cl_mem* out_b_buffer,
+	cl_context* context, cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension, cl_mem* thread_workload)
+{
+
+//Start data movement tiemr
+#if RUN_MODE == TIME_GPU
+	struct timeval starttime, endtime;
+	double runtime[3] = { 0 };
+	gettimeofday(&starttime, NULL);
+#endif
+
+	// write to in buffers
+	clEnqueueWriteBuffer(*queue, *in_r_buffer, CL_FALSE, 0, SIZE_BYTES, in->rc->data, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *in_g_buffer, CL_FALSE, 0, SIZE_BYTES, in->gc->data, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *in_b_buffer, CL_FALSE, 0, SIZE_BYTES, in->bc->data, 0, NULL, NULL);
+
+	// write to out buffers
+	clEnqueueWriteBuffer(*queue, *out_r_buffer, CL_FALSE, 0, SIZE_BYTES, out->rc->data, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *out_g_buffer, CL_FALSE, 0, SIZE_BYTES, out->gc->data, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *out_b_buffer, CL_FALSE, 0, SIZE_BYTES, out->bc->data, 0, NULL, NULL);
+	
+//Wait for the write to the kernel and time the duration
+#if RUN_MODE == TIME_GPU
+	clFinish(*queue);//Wait for kernel activity to finish
+
+	gettimeofday(&endtime, NULL);
+	runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
+#endif
+
+	// make in args
+	clSetKernelArg(*kernel, 0, sizeof(*in_r_buffer), in_r_buffer);
+	clSetKernelArg(*kernel, 1, sizeof(*in_g_buffer), in_g_buffer);
+	clSetKernelArg(*kernel, 2, sizeof(*in_b_buffer), in_b_buffer);
+
+	// make out args
+	clSetKernelArg(*kernel, 3, sizeof(*out_r_buffer), out_r_buffer);
+	clSetKernelArg(*kernel, 4, sizeof(*out_g_buffer), out_g_buffer);
+	clSetKernelArg(*kernel, 5, sizeof(*out_b_buffer), out_b_buffer);
+
+	// Pixels per thread arg
+	clSetKernelArg(*kernel, 6, sizeof(*thread_workload), thread_workload);
+
+#if RUN_MODE == TIME_GPU
+	gettimeofday(&starttime, NULL);
+#endif
+	// enqueue kernel
+	clEnqueueNDRangeKernel(*queue, *kernel, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
+
+
+#if RUN_MODE == TIME_GPU
+	clFinish(*queue);
+	gettimeofday(&endtime, NULL);
+	runtime[1] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in m
+
+	//Start timer for write back
+	gettimeofday(&starttime, NULL);
+#endif
+
+	// read output buffers
+	clEnqueueReadBuffer(*queue, *out_r_buffer, CL_FALSE, 0, SIZE_BYTES, out->rc->data, 0, NULL, NULL);
+	clEnqueueReadBuffer(*queue, *out_g_buffer, CL_FALSE, 0, SIZE_BYTES, out->gc->data, 0, NULL, NULL);
+	clEnqueueReadBuffer(*queue, *out_b_buffer, CL_FALSE, 0, SIZE_BYTES, out->bc->data, 0, NULL, NULL);
+
+	clFinish(*queue);
+
+
+#if RUN_MODE == TIME_GPU
+	gettimeofday(&endtime, NULL);
+	runtime[2] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
+	printf("GPU Data Movement %lf: \n", runtime[0]+runtime[2]);
+	printf("GPU Kernel execution %lf: \n", runtime[1]);
+#endif
+}
 
 int encode() {
     int end_frame = int(N_FRAMES);
@@ -873,43 +928,109 @@ int encode() {
     stream = create_xml_stream(width, height, QUALITY, WINDOW_SIZE, BLOCK_SIZE);
     vector<mVector>* motion_vectors = NULL;
 
+#if RUN_MODE == TIME_GPU || RUN_MODE == TIME_RUNTIME
+	gettimeofday(&starttime, NULL);
+#endif
+
+
 	//opencl
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
 	cl_kernel kernel;
 	cl_program program_cl;
+
 	setup_cl(&device, &context, &queue);
 	compile_kernel(&device, &context, &kernel, &program_cl);
 
 	//Create in and out array
-	float *f_in, *f_out;
-	f_in = (float*)malloc(SIZE_BYTES);
-	f_out = (float*)malloc(SIZE_BYTES);
-	memset(f_in, 0, SIZE_BYTES);
-	memset(f_out, 0, SIZE_BYTES);
+	float* in_r;
+	float* in_g;
+	float* in_b;
 
-	cl_mem in_buffer, out_buffer;
-	size_t global_dimension[] = { SIZE*SIZE,0,0 };
-	kernel_init(&in_buffer, &out_buffer, &context);
+	float* out_r;
+	float* out_g;
+	float* out_b;
+
+	in_r = (float*)malloc(SIZE_BYTES);
+	in_g = (float*)malloc(SIZE_BYTES);
+	in_b = (float*)malloc(SIZE_BYTES);
+	
+	out_r = (float*)malloc(SIZE_BYTES);
+	out_g = (float*)malloc(SIZE_BYTES);
+	out_b = (float*)malloc(SIZE_BYTES);
+
+	
+	//Set dimension size after requested threads
+	int dim_size = SIZE*SIZE;
+	//int requested_threads = 32 * GPU_CORES;
+	//SIZE*SIZE > requested_threads ? dim_size = requested_threads : dim_size = SIZE * SIZE;
+	size_t global_dimension[] = { dim_size, 0, 0 };
+
+	//Assign workload per thread 
+	int t_workload = 0;// SIZE*SIZE / requested_threads;
+
+	// kernel init
+	cl_mem in_r_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+	cl_mem in_g_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+	cl_mem in_b_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+
+	cl_mem out_r_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+	cl_mem out_g_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+	cl_mem out_b_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
+
+	cl_mem thread_workload = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int), NULL, NULL);
+	clEnqueueWriteBuffer(queue, thread_workload, CL_FALSE, 0, sizeof(int), &t_workload, 0, NULL, NULL);
 
 
+#if RUN_MODE == TIME_GPU || RUN_MODE == TIME_RUNTIME
+	gettimeofday(&endtime, NULL);
+	runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
+	printf("GPU Initialization %lf: \n", runtime[0]);
+#endif
 
     for (int frame_number = 0 ; frame_number < end_frame ; frame_number++) {
 		frame_rgb = NULL;
 
-		//A: Reading image from file each loop iteration.
         loadImage(frame_number, image_path, &frame_rgb);
-
+		
         //  Convert to YCbCr
-		print("Covert to YCbCr...");
+		print("Convert to YCbCr...");
         
-		Image* frame_ycbcr = new Image(width, height, FULLSIZE);//A: Move out of loop, right?
+		Image* frame_ycbcr = new Image(width, height, FULLSIZE);
+
+		// start timer
 		gettimeofday(&starttime, NULL);
-		convertRGBtoYCbCr(frame_rgb, frame_ycbcr, &in_buffer, &out_buffer, &context,
-			&queue, &kernel, global_dimension, f_in, f_out);
+
+
+#if RUN_MODE == TIME_RUNTIME
+		gettimeofday(&starttime, NULL);
+#endif
+
+#define gpu 1
+#define cpu 2
+#define mode gpu
+
+#if mode == gpu
+		gpu_convertRGBtoYCbCr(
+			frame_rgb, frame_ycbcr,
+			&in_r_buffer, &in_g_buffer, &in_b_buffer, &out_r_buffer, &out_g_buffer, &out_b_buffer,
+			&context, &queue, &kernel, global_dimension, &thread_workload);
+#elif mode == cpu
+		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
+#endif
+
+
+#if RUN_MODE == TIME_RUNTIME
+		gettimeofday(&endtime, NULL);
+		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
+		printf("GPU TOTAL: %lf\n", runtime[0]);
+#endif
+		
+		// stop timer
 		gettimeofday(&endtime, NULL);
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec)/1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec)/1000.0f; //in ms
+		
         
 		dump_image(frame_ycbcr, "frame_ycbcr", frame_number);
 		delete frame_rgb;
@@ -1077,14 +1198,21 @@ int encode() {
 
     }
 	
+	free(in_r);
+	free(in_g);
+	free(in_b);
+
+	free(out_r);
+	free(out_g);
+	free(out_b);
+
 	cleanup(&kernel, &program_cl);
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */
-	//system("pause");
+	system("pause");
     
 	return 0;
 }
- 
  
 int main(int args, char** argv) {
     encode();
