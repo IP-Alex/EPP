@@ -5,7 +5,9 @@ kernel void convert(global float* in_r, global float* in_g, global float* in_b, 
 	int id = get_global_id(0);
 	int threads = get_global_size(0);
 	int j = 0;
-	for (int i = id; j < workload; i += threads) {
+	for (int i = id; j < *workload; i += threads) {
+		if (i > 128 * 128)
+			break;
 		// load in data to local variables
 		float R = in_r[i]; //Row (0) * rowsize (128)
 		float G = in_g[i]; //Row (1) * rowsize (128)

@@ -968,7 +968,7 @@ int encode() {
 	size_t global_dimension[] = { dim_size, 0, 0 };
 
 	//Assign workload per thread 
-	int t_workload = 0;// SIZE*SIZE / requested_threads;
+	int t_workload = 1;// ceil(SIZE*SIZE / requested_threads);
 
 	// kernel init
 	cl_mem in_r_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
