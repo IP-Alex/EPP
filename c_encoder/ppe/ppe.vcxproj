@@ -102,6 +102,9 @@
     <ClInclude Include="test_setup.h" />
     <ClInclude Include="xml_aux.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="kernel.cl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

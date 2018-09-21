@@ -18,8 +18,6 @@
 using namespace std;
 
 
-
-
 void loadImage(int number, string path, Image** photo) {
     string filename;
     TIFFRGBAImage img;
@@ -63,14 +61,17 @@ void loadImage(int number, string path, Image** photo) {
     TIFFClose(tif);
      
 }
-
-#define normal 1
+#define gpu 1
+#define mode gpu
 #define _CORES 1
-void convertRGBtoYCbCr(Image* in, Image* out){
+void convertRGBtoYCbCr(Image* in, Image* out, cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context, 
+						cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension, 
+						float* f_in, float* f_out){
 
+#if mode != gpu
     int width = in->width;
     int height = in->height;
-
+#endif
 		/*
 			IMPROVEMENT: Flip x and y loop. 
 			Look for conflicts between R,G and B CLs.
@@ -437,25 +438,19 @@ void convertRGBtoYCbCr(Image* in, Image* out){
 				out->rc->data[x*width + y] = Y;
 				out->gc->data[x*width + y] = Cb;
 				out->bc->data[x*width + y] = Cr;
+			}
+			}
 #endif
 
-#ifdef GPU
+#if mode == gpu
 
-				for (int y = 0; y<width; y++) {
-					for (int x = 0; x<height; x++) {
-						float R = in->rc->data[x*width + y];
-						float G = in->gc->data[x*width + y];
-						float B = in->bc->data[x*width + y];
-						float Y = 0 + ((float)0.299*R) + ((float)0.587*G) + ((float)0.113*B);
-						float Cb = 128 - ((float)0.168736*R) - ((float)0.331264*G) + ((float)0.5*B);
-						float Cr = 128 + ((float)0.5*R) - ((float)0.418688*G) - ((float)0.081312*B);
-						out->rc->data[x*width + y] = Y;
-						out->gc->data[x*width + y] = Cb;
-						out->bc->data[x*width + y] = Cr;
+		kernel_calculate(in_buffer, out_buffer, context,
+						queue, kernel, global_dimension, f_in, f_out);
+
 #endif
 
-        }
-    }
+        
+    
      
     //return out;
 }
@@ -878,6 +873,28 @@ int encode() {
     stream = create_xml_stream(width, height, QUALITY, WINDOW_SIZE, BLOCK_SIZE);
     vector<mVector>* motion_vectors = NULL;
 
+	//opencl
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	cl_kernel kernel;
+	cl_program program_cl;
+	setup_cl(&device, &context, &queue);
+	compile_kernel(&device, &context, &kernel, &program_cl);
+
+	//Create in and out array
+	float *f_in, *f_out;
+	f_in = (float*)malloc(SIZE_BYTES);
+	f_out = (float*)malloc(SIZE_BYTES);
+	memset(f_in, 0, SIZE_BYTES);
+	memset(f_out, 0, SIZE_BYTES);
+
+	cl_mem in_buffer, out_buffer;
+	size_t global_dimension[] = { SIZE*SIZE,0,0 };
+	kernel_init(&in_buffer, &out_buffer, &context);
+
+
+
     for (int frame_number = 0 ; frame_number < end_frame ; frame_number++) {
 		frame_rgb = NULL;
 
@@ -889,7 +906,8 @@ int encode() {
         
 		Image* frame_ycbcr = new Image(width, height, FULLSIZE);//A: Move out of loop, right?
 		gettimeofday(&starttime, NULL);
-		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
+		convertRGBtoYCbCr(frame_rgb, frame_ycbcr, &in_buffer, &out_buffer, &context,
+			&queue, &kernel, global_dimension, f_in, f_out);
 		gettimeofday(&endtime, NULL);
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec)/1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec)/1000.0f; //in ms
         
@@ -1059,6 +1077,7 @@ int encode() {
 
     }
 	
+	cleanup(&kernel, &program_cl);
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */
 	//system("pause");
@@ -1067,11 +1086,7 @@ int encode() {
 }
  
  
-int main(int args, char** argv){
-	cl_device_id _1;
-	cl_context _2;
-	cl_command_queue _3;
-	setup_cl(&_1, &_2, &_3);
+int main(int args, char** argv) {
     encode();
     return 0;
 }

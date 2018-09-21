@@ -52,3 +52,83 @@ void setup_cl(cl_device_id *device, cl_context *context, cl_command_queue *queue
 		exit(-1);
 	}
 }
+
+char* load_kernel_file(char* filename) {
+	char* kernel_text;
+	FILE* file = fopen(filename, "r");
+	if (file == NULL) {
+		printf("[ERROR] - Get file failed. Error: %s", filename);
+		exit(-1);
+	}
+
+	struct stat file_info;
+	stat(filename, &file_info);
+
+	//Allocate memory for the kernel file
+	kernel_text = (char*)malloc(file_info.st_size+1);
+	memset(kernel_text, 0, file_info.st_size);
+
+	//Read file, exit if unsuccessful
+	if(fread(kernel_text, file_info.st_size, 1, file) != -1) {
+		printf("[ERROR] - Get file failed. Error: %s", filename);
+		exit(-1);
+	}
+
+	return kernel_text;
+}
+
+void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel, cl_program* program_cl) {
+	cl_int error;
+	
+	char* program_text = load_kernel_file("kernerl.cl");
+
+	*program_cl = clCreateProgramWithSource(*context, 1, (const char**)&program_text, NULL, &error);
+	if (error != CL_SUCCESS) {
+		printf("[ERROR] - Create context failed. Error: %d", error);
+		exit(-1);
+	}
+
+	clBuildProgram(*program_cl, 1, device, NULL, NULL, NULL);
+	if (error != CL_SUCCESS) {
+		printf("[ERROR] - Build kernel failed. Error: %d", error);
+		exit(-1);
+	}
+
+	*kernel = clCreateKernel(*program_cl, "convert", &error);
+	if (error != CL_SUCCESS) {
+		printf("[ERROR] - Create kernel failed. Error: %d", error);
+		exit(-1);
+	}
+
+	free(program_text);
+}
+
+void kernel_init(cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context) {
+	*in_buffer = clCreateBuffer(*context, CL_MEM_READ_ONLY, SIZE_BYTES, NULL, NULL);
+	*out_buffer = clCreateBuffer(*context, CL_MEM_READ_ONLY, SIZE_BYTES, NULL, NULL);
+}
+
+
+void kernel_calculate(cl_mem* in_buffer, cl_mem* out_buffer, cl_context* context, 
+					  cl_command_queue* queue, cl_kernel* kernel, size_t global_dimension[],
+					  float* in, float* out) {
+
+	clEnqueueWriteBuffer(*queue, *in_buffer, CL_FALSE, 0, SIZE_BYTES, in, 0, NULL, NULL);
+	clEnqueueWriteBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES, out, 0, NULL, NULL);
+
+	clSetKernelArg(*kernel, 0, sizeof(*in_buffer), in_buffer);
+	clSetKernelArg(*kernel, 0, sizeof(*out_buffer), in_buffer);
+
+	clEnqueueNDRangeKernel(*queue, *kernel, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
+
+	clEnqueueReadBuffer(*queue, *out_buffer, CL_FALSE, 0, SIZE_BYTES, out, 0, NULL, NULL);
+
+	clFinish(*queue);
+}
+
+void cleanup(cl_kernel* kernel, cl_program* program) {
+	//clReleaseMemObject(out_buffer);
+	//clReleaseMemObject(in_buffer);
+	clReleaseKernel(*kernel);
+	clReleaseProgram(*program);
+}
