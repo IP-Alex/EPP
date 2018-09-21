@@ -1,12 +1,6 @@
-﻿  main.cpp
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(26): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(317): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(318): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(319): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(321): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(322): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(326): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(327): warning C4305: 'argument': truncation from 'double' to 'float'
+﻿  opencl_helper.cpp
+c:\users\alla7073\documents\alla7073 (uuit-bonasa.its.uu.sestudent-users)\epp\video_compression\c_encoder\ppe\opencl_helper.cpp(58): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(208): note: see declaration of 'fopen'
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/PROFILE' specification
 custom_types.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:REF' specification
-  ppe.vcxproj -> C:\Users\alla7073\Documents\video_compression\c_encoder\Debug\ppe.exe
+  ppe.vcxproj -> C:\Users\alla7073\Documents\alla7073 (UUIT-bonasa.its.uu.sestudent-users)\epp\video_compression\c_encoder\Debug\ppe.exe

@@ -53,34 +53,37 @@ void setup_cl(cl_device_id *device, cl_context *context, cl_command_queue *queue
 	}
 }
 
-char* load_kernel_file(char* filename) {
+char* load_kernel_file(const char* filename) {
 	char* kernel_text;
 	FILE* file = fopen(filename, "r");
-	if (file == NULL) {
+	struct stat file_info;
+	int error_code = stat(filename, &file_info);
+
+	if (error_code) {
 		printf("[ERROR] - Get file failed. Error: %s", filename);
 		exit(-1);
 	}
 
-	struct stat file_info;
-	stat(filename, &file_info);
+	
 
 	//Allocate memory for the kernel file
 	kernel_text = (char*)malloc(file_info.st_size+1);
-	memset(kernel_text, 0, file_info.st_size);
+	memset(kernel_text, 0, file_info.st_size+1);
 
 	//Read file, exit if unsuccessful
-	if(fread(kernel_text, file_info.st_size, 1, file) != -1) {
+	size_t result = fread(kernel_text, file_info.st_size, 1, file);
+	/*if(result != 1) {
 		printf("[ERROR] - Get file failed. Error: %s", filename);
 		exit(-1);
 	}
-
+	*/
 	return kernel_text;
 }
 
 void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel, cl_program* program_cl) {
 	cl_int error;
 	
-	char* program_text = load_kernel_file("kernerl.cl");
+	char* program_text = load_kernel_file("kernel.cl");
 
 	*program_cl = clCreateProgramWithSource(*context, 1, (const char**)&program_text, NULL, &error);
 	if (error != CL_SUCCESS) {
