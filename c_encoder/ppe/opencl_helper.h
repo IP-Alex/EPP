@@ -21,7 +21,7 @@
 #define TIME_RUNTIME 1
 #define TIME_GPU 2
 #define NO_TIMEING 3
-#define RUN_MODE TIME_GPU
+#define RUN_MODE TIME_RUNTIME
 #define GPU_CORES SIZE*SIZE
 
 typedef enum colorchannel {R=0,G=1,B=2};

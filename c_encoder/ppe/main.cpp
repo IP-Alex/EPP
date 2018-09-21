@@ -432,15 +432,16 @@ void convertRGBtoYCbCr(Image* in, Image* out) {
 				float R = in->rc->data[x*width + y];
 				float G = in->gc->data[x*width + y];
 				float B = in->bc->data[x*width + y];
-				float Y = 0 + ((float)0.299*R) + ((float)0.587*G) + ((float)0.113*B);
-				float Cb = 128 - ((float)0.168736*R) - ((float)0.331264*G) + ((float)0.5*B);
-				float Cr = 128 + ((float)0.5*R) - ((float)0.418688*G) - ((float)0.081312*B);
+				float Y = 0 +((float)0.299*R) + ((float)0.587*G) + ((float)0.113*B);
+				float Cb = 128 -((float)0.168736*R) - ((float)0.331264*G) + ((float)0.5*B);
+				float Cr = 128 +((float)0.5*R) - ((float)0.418688*G) - ((float)0.081312*B);
 				out->rc->data[x*width + y] = Y;
 				out->gc->data[x*width + y] = Cb;
 				out->bc->data[x*width + y] = Cr;
 			}
 		}
 #endif
+
 }
 
 Channel* lowPass(Channel* in, Channel* out){
@@ -1020,7 +1021,9 @@ int encode() {
 			&in_r_buffer, &in_g_buffer, &in_b_buffer, &out_r_buffer, &out_g_buffer, &out_b_buffer,
 			&context, &queue, &kernel, global_dimension, &thread_workload, &image_size);
 #elif mode == cpu
+
 		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
+
 #endif
 
 
