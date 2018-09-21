@@ -20,10 +20,10 @@
 // Use these settings for profiling optimizaitons
 //
 #ifndef USE_MATLAB
-#define N_FRAMES 5
+#define N_FRAMES 2
 #define I_FRAME_FREQ 2
 #define DUMP_TO_DEBUG true
-#define image_name "blooper"
+#define image_name "solar"
 #endif
 
 #endif

@@ -1,22 +1,30 @@
-﻿  main.cpp
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\opencl_helper.h(26): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
+﻿  custom_types.cpp
+  main.cpp
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\opencl_helper.h(27): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
 c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(29): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(968): warning C4838: conversion from 'int' to 'size_t' requires a narrowing conversion
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(998): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1012): warning C4005: 'mode': macro redefinition
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(966): warning C4838: conversion from 'int' to 'size_t' requires a narrowing conversion
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(969): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(969): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1001): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1015): warning C4005: 'mode': macro redefinition
   c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(67): note: see previous definition of 'mode'
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1039): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1069): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1076): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1094): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1114): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1129): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1144): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1158): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
-c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1173): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1042): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1072): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1079): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1097): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1117): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1132): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1147): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1161): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\main.cpp(1176): warning C4353: nonstandard extension used: constant 0 as function expression.  Use '__noop' function intrinsic instead
+  opencl_helper.cpp
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\opencl_helper.h(27): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
+c:\users\alla7073\documents\video_compression\c_encoder\ppe\opencl_helper.cpp(58): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(208): note: see declaration of 'fopen'
+  xml_aux.cpp
   Generating code
-  0 of 333 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  5 of 334 functions ( 1.5%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    4 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   ppe.vcxproj -> C:\Users\alla7073\Documents\video_compression\c_encoder\Release\ppe.exe

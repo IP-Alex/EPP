@@ -827,7 +827,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded){
 void gpu_convertRGBtoYCbCr(
 	Image* in, Image* out,
 	cl_mem* in_r_buffer, cl_mem* in_g_buffer, cl_mem* in_b_buffer, cl_mem* out_r_buffer, cl_mem* out_g_buffer, cl_mem* out_b_buffer,
-	cl_context* context, cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension, cl_mem* thread_workload)
+	cl_context* context, cl_command_queue* queue, cl_kernel* kernel, size_t* global_dimension, cl_mem* thread_workload, cl_mem* image_size)
 {
 
 //Start data movement tiemr
@@ -841,11 +841,6 @@ void gpu_convertRGBtoYCbCr(
 	clEnqueueWriteBuffer(*queue, *in_r_buffer, CL_FALSE, 0, SIZE_BYTES, in->rc->data, 0, NULL, NULL);
 	clEnqueueWriteBuffer(*queue, *in_g_buffer, CL_FALSE, 0, SIZE_BYTES, in->gc->data, 0, NULL, NULL);
 	clEnqueueWriteBuffer(*queue, *in_b_buffer, CL_FALSE, 0, SIZE_BYTES, in->bc->data, 0, NULL, NULL);
-
-	// write to out buffers
-	clEnqueueWriteBuffer(*queue, *out_r_buffer, CL_FALSE, 0, SIZE_BYTES, out->rc->data, 0, NULL, NULL);
-	clEnqueueWriteBuffer(*queue, *out_g_buffer, CL_FALSE, 0, SIZE_BYTES, out->gc->data, 0, NULL, NULL);
-	clEnqueueWriteBuffer(*queue, *out_b_buffer, CL_FALSE, 0, SIZE_BYTES, out->bc->data, 0, NULL, NULL);
 	
 //Wait for the write to the kernel and time the duration
 #if RUN_MODE == TIME_GPU
@@ -867,6 +862,9 @@ void gpu_convertRGBtoYCbCr(
 
 	// Pixels per thread arg
 	clSetKernelArg(*kernel, 6, sizeof(*thread_workload), thread_workload);
+
+	//Image size arg
+	clSetKernelArg(*kernel, 7, sizeof(*image_size), image_size);
 
 #if RUN_MODE == TIME_GPU
 	gettimeofday(&starttime, NULL);
@@ -962,13 +960,13 @@ int encode() {
 
 	
 	//Set dimension size after requested threads
-	int dim_size = SIZE*SIZE;
-	//int requested_threads = 32 * GPU_CORES;
-	//SIZE*SIZE > requested_threads ? dim_size = requested_threads : dim_size = SIZE * SIZE;
+	int dim_size;// = SIZE * SIZE;
+	int requested_threads = 32 * GPU_CORES;
+	SIZE*SIZE > requested_threads ? dim_size = requested_threads : dim_size = SIZE * SIZE;
 	size_t global_dimension[] = { dim_size, 0, 0 };
 
 	//Assign workload per thread 
-	int t_workload = 1;// ceil(SIZE*SIZE / requested_threads);
+	int t_workload = max(ceil(SIZE * SIZE / requested_threads),1);
 
 	// kernel init
 	cl_mem in_r_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE_BYTES, NULL, NULL);
@@ -981,6 +979,11 @@ int encode() {
 
 	cl_mem thread_workload = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int), NULL, NULL);
 	clEnqueueWriteBuffer(queue, thread_workload, CL_FALSE, 0, sizeof(int), &t_workload, 0, NULL, NULL);
+
+	int isize = SIZE * SIZE;
+	cl_mem image_size = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int), NULL, NULL);
+	clEnqueueWriteBuffer(queue, image_size, CL_FALSE, 0, sizeof(int), &isize, 0, NULL, NULL);
+	
 
 
 #if RUN_MODE == TIME_GPU || RUN_MODE == TIME_RUNTIME
@@ -1015,7 +1018,7 @@ int encode() {
 		gpu_convertRGBtoYCbCr(
 			frame_rgb, frame_ycbcr,
 			&in_r_buffer, &in_g_buffer, &in_b_buffer, &out_r_buffer, &out_g_buffer, &out_b_buffer,
-			&context, &queue, &kernel, global_dimension, &thread_workload);
+			&context, &queue, &kernel, global_dimension, &thread_workload, &image_size);
 #elif mode == cpu
 		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
 #endif
@@ -1039,7 +1042,6 @@ int encode() {
         print("Low pass filter..."); 
 
 		gettimeofday(&starttime, NULL);
-		//A: Same as the allocation above. Could we gain performance by moving this out of the loop?
 		Channel* frame_blur_cb = new Channel(width, height);
         Channel* frame_blur_cr = new Channel(width, height);
 		Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
@@ -1061,6 +1063,7 @@ int encode() {
 
         Frame *frame_lowpassed_final = NULL;
  
+		
         if (frame_number % i_frame_frequency != 0) { 
             // We have a P frame 
             // Note that in the first iteration we don't enter this branch!

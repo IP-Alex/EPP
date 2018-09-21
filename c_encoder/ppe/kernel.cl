@@ -1,17 +1,16 @@
 
 kernel void convert(global float* in_r, global float* in_g, global float* in_b, global float* out_r, 
-					global float* out_g, global float* out_b, global int* workload) {
+					global float* out_g, global float* out_b, global int* workload, global int* image_size) {
 	// what’s my id?
 	int id = get_global_id(0);
 	int threads = get_global_size(0);
 	int j = 0;
-	for (int i = id; j < *workload; i += threads) {
-		if (i > 128 * 128)
-			break;
+	for (int i = id; j < *workload && i < *image_size; i += threads) {
+		
 		// load in data to local variables
-		float R = in_r[i]; //Row (0) * rowsize (128)
-		float G = in_g[i]; //Row (1) * rowsize (128)
-		float B = in_b[i]; //Row (2) * rowsize (128)
+		float R = in_r[i]; 
+		float G = in_g[i]; 
+		float B = in_b[i];
 
 		// compute
 		float Y = 0 + ((float)0.299*R) + ((float)0.587*G) + ((float)0.113*B);
