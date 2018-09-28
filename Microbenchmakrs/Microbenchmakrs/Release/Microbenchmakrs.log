@@ -1,19 +1,20 @@
 ﻿  add_benchmark.cpp
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(80): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(108): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(139): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(147): warning C4018: '<': signed/unsigned mismatch
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(165): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(174): warning C4018: '<': signed/unsigned mismatch
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(198): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(209): warning C4018: '<': signed/unsigned mismatch
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(230): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(244): warning C4018: '<': signed/unsigned mismatch
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(277): warning C4307: '*': integral constant overflow
-c:\users\alla7073\documents\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(302): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(169): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(196): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(231): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(266): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(353): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(311): warning C4101: '_start_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(311): warning C4101: '_end_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(412): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(382): warning C4101: '_start_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(382): warning C4101: '_end_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(444): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(447): warning C4307: '*': integral constant overflow
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(478): warning C4307: '*': integral constant overflow
   Generating code
-  0 of 14 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  4 of 20 functions (20.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
-  Microbenchmakrs.vcxproj -> C:\Users\alla7073\Documents\Microbenchmakrs\Release\Microbenchmakrs.exe
+  Microbenchmakrs.vcxproj -> X:\Documents\PPE\EPP\Microbenchmakrs\Release\Microbenchmakrs.exe

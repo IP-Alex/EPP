@@ -6,13 +6,22 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <omp.h>
 #include <time.h>
 #include "gettimeofdayWin.h"
 #include <intrin.h>
 
-#define NUMBER_OF_RUNS 10
-#define TESTS_PER_RUN 1000*1000*1000*1000*1000L
+#define NUMBER_OF_RUNS 40
+
+#define L_MAX 2147483647L
+#define L_meh 1750000000L
+#define L_30 1073741824L
+#define L_29 536870912L
+#define L_25 33554432L
+#define TESTS_PER_RUN L_MAX
+
+#define ARRAY_SIZE 2147483640
 
 struct timeval start_time, end_time;
 
@@ -23,6 +32,10 @@ void add_microbenchmark4(char scale);
 void add_microbenchmark5(char scale);
 void add_microbenchmark6(char scale);
 void add_microbenchmark7(char scale);
+void add_microbenchmark8(char scale);
+void add_microbenchmark9(char scale);
+//void add_microbenchmark10(char scale);
+//void add_microbenchmark11(char scale);
 
 void pause(void){
 	printf("press Enter to exit\n");
@@ -32,7 +45,8 @@ void pause(void){
 
 int main(int argc, const char * argv[])
 {
-	int benchmark=7;
+	int benchmark=9;
+	printf("Number of runs: %d; Tests per run: %ld\n", NUMBER_OF_RUNS, TESTS_PER_RUN);
 
 	switch(benchmark){
 		case 1:
@@ -61,7 +75,15 @@ int main(int argc, const char * argv[])
 			break;
 		case 7:
 			printf("== Benchmark 7 == :\n");
-			add_microbenchmark7(50);
+			add_microbenchmark7(1);
+			break;
+		case 8:
+			printf("== Benchmark 8 == :\n");
+			add_microbenchmark8(1);
+			break;
+		case 9:
+			printf("== Benchmark 9 == :\n");
+			add_microbenchmark9(1);
 			break;
 		default:
 			printf("Invalid benchmark!\n");
@@ -260,7 +282,8 @@ void add_microbenchmark6(char scale) {
 }
 
 
-char reduce(__m128i *sum, int array_size=4, int sse_width = 16) {
+template<class T>
+char reduce(T *sum, int array_size=4, int sse_width = 16) {
 	char result = 0;
 	for (int i = 0; i < array_size; i++) {
 		for (int j = 0; j < sse_width; j++) 
@@ -269,50 +292,199 @@ char reduce(__m128i *sum, int array_size=4, int sse_width = 16) {
 	return result;
 }
 
+template<class T>
+int sum_arr(T* sum_t0, T* sum_t1, T* sum_t2, T* sum_t3, int array_size = 4, int sse_width = 16) {
+	char result = 0;
+	for (int i = 0; i < array_size; i++) 
+		for (int j = 0; j < sse_width; j++)
+			result += ((char*)(&sum_t0[i]))[j] + ((char*)(&sum_t1[i]))[j] + ((char*)(&sum_t2[i]))[j] + ((char*)(&sum_t3[i]))[j];
+
+	
+	
+	return result;
+}
 /*
 	add benchmark 7
  */
 void add_microbenchmark7(char scale) {
-	//TODO :)
+
+	struct timeval _start_time, _end_time;
 	unsigned long LOCAL_TESTS_PER_RUN = TESTS_PER_RUN * scale;
-
 	char sum = 1;
-	const int num_threads = 4;
-	int tid = 0;
 
-	__m128i sum_v0[num_threads] = { _mm_set1_epi8(0) };
-	__m128i sum_v1[num_threads] = { _mm_set1_epi8(0) };
-	__m128i sum_v2[num_threads] = { _mm_set1_epi8(0) };
-	__m128i sum_v3[num_threads] = { _mm_set1_epi8(0) };
-	__m128i addthis_v =  _mm_set1_epi8(scale);
+	__m128i sum_v0 = _mm_set1_epi8(0);
+	__m128i sum_v1 = _mm_set1_epi8(0);
+	__m128i sum_v2 = _mm_set1_epi8(0);
+	__m128i sum_v3 = _mm_set1_epi8(0);
+	//__m128i addthis_v = _mm_set1_epi8(scale);
 
-	printf("num_threads %d\n", num_threads);
+	// cache line 64bytes
+	// load 2 lines per fetch = 128bytes
+	__m128i sum_v[4][8];
+	for (int four = 0; four < 4; four++) {
+		for (int fourfour = 0; fourfour < 4 + 4; fourfour++) {
+			sum_v[four][fourfour] = _mm_set1_epi8(1);
+		}
+	}
+	__m128i addthis_v[4] = { _mm_set1_epi8(1),_mm_set1_epi8(1) ,_mm_set1_epi8(1) ,_mm_set1_epi8(1) };
+	double start_omp_time[4], total_time;
 
 #pragma omp parallel num_threads(4)
-	printf("Number of threads %d\n", omp_get_num_threads());
+	{
+		int j = 1;
+		printf("%d", j);
+	}
 
-	for (int run = 0; run<NUMBER_OF_RUNS; run++) {
 
-		gettimeofday(&start_time, NULL);
 
-#pragma omp parallel private(sum_v0, sum_v1 ,sum_v2 ,sum_v3, tid) 
+		//gettimeofday(&_start_time, NULL);
+
+
+	for (int run = 0; run < NUMBER_OF_RUNS; run++) {
+
+#pragma omp parallel num_threads(4)
 		{
-			tid = omp_get_thread_num();
+			int tid = omp_get_thread_num();
+			start_omp_time[tid] = omp_get_wtime();
+
+			//#pragma omp parallel for  (0 10 20... 40)
 #pragma omp for
-			for (long test = 0; test < LOCAL_TESTS_PER_RUN; test += 16 * 4) {
-				sum_v0[tid] = _mm_add_epi8(addthis_v, sum_v0[tid]);
-				sum_v1[tid] = _mm_add_epi8(addthis_v, sum_v1[tid]);
-				sum_v2[tid] = _mm_add_epi8(addthis_v, sum_v2[tid]);
-				sum_v3[tid] = _mm_add_epi8(addthis_v, sum_v3[tid]);
+			for (long test1 = 0; test1 < 200; test1++) {
+				for (long test = 0; test < LOCAL_TESTS_PER_RUN; test += 16 * 4) {
+					sum_v[tid][0] = _mm_add_epi8(addthis_v[tid], sum_v[tid][0]);
+					sum_v[tid][1] = _mm_add_epi8(addthis_v[tid], sum_v[tid][1]);
+					sum_v[tid][2] = _mm_add_epi8(addthis_v[tid], sum_v[tid][2]);
+					sum_v[tid][3] = _mm_add_epi8(addthis_v[tid], sum_v[tid][3]);
+				}
 			}
 		}
 
-		gettimeofday(&end_time, NULL);
 
-		double time_in_sec = (end_time.tv_sec + end_time.tv_usec / 1000000.0) - (start_time.tv_sec + start_time.tv_usec / 1000000.0);
-		double GOPS = (LOCAL_TESTS_PER_RUN / time_in_sec) / 1000000000;
-		sum += reduce(sum_v0, num_threads) + reduce(sum_v1, num_threads) + reduce(sum_v2, num_threads) + reduce(sum_v3, num_threads);
+		total_time = omp_get_wtime() - start_omp_time[0];
+		//double time_in_sec = (_end_time.tv_sec + _end_time.tv_usec / 1000000.0) - (_start_time.tv_sec + _start_time.tv_usec / 1000000.0);
+
+		double GOPS = 200*((LOCAL_TESTS_PER_RUN / total_time) / 1e9);
+		sum += sum_arr(sum_v[0], sum_v[1], sum_v[2], sum_v[3]);
+
 		printf("sum: %d\n", sum);
-		printf("Completed %lu adds in %g seconds for %g GOPS.\n", LOCAL_TESTS_PER_RUN, time_in_sec, GOPS);
+		printf("Completed %lu adds in %g seconds for %g GOPS.\n", LOCAL_TESTS_PER_RUN, total_time, GOPS);
+
 	}
+
+}
+
+
+/*
+add benchmark 8
+*/
+void add_microbenchmark8(char scale) {
+
+	struct timeval _start_time, _end_time;
+	unsigned long LOCAL_TESTS_PER_RUN = TESTS_PER_RUN * scale;
+	char sum = 1;
+
+	// cache line 64bytes
+	// load 2 lines per fetch = 128bytes
+	__m256 sum_v[4][8];
+	for (int four = 0; four < 4; four++) {
+		for (int fourfour = 0; fourfour < 4 + 4; fourfour++) {
+			sum_v[four][fourfour] = _mm256_set_ps(1,1,1,1,1,1,1,1);
+		}
+	}
+	__m256 addthis_v[4] = { _mm256_set_ps(1,1,1,1,1,1,1,1),_mm256_set_ps(1,1,1,1,1,1,1,1),_mm256_set_ps(1,1,1,1,1,1,1,1),_mm256_set_ps(1,1,1,1,1,1,1,1) };
+	double start_omp_time[4], total_time;
+
+#pragma omp parallel num_threads(4)
+	{
+		int j = 1;
+		printf("%d", j);
+	}
+
+	for (int run = 0; run < NUMBER_OF_RUNS; run++) {
+
+#pragma omp parallel num_threads(4)
+		{
+			int tid = omp_get_thread_num();
+			start_omp_time[tid] = omp_get_wtime();
+
+#pragma omp for
+			for (long test1 = 0; test1 < 200; test1++) {
+				for (long test = 0; test < LOCAL_TESTS_PER_RUN; test += 16 * 4) {
+					sum_v[tid][0] = _mm256_add_ps(addthis_v[tid], sum_v[tid][0]);
+					sum_v[tid][1] = _mm256_add_ps(addthis_v[tid], sum_v[tid][1]);
+					sum_v[tid][2] = _mm256_add_ps(addthis_v[tid], sum_v[tid][2]);
+					sum_v[tid][3] = _mm256_add_ps(addthis_v[tid], sum_v[tid][3]);
+				}
+			}
+		}
+
+
+		total_time = omp_get_wtime() - start_omp_time[0];
+		//double time_in_sec = (_end_time.tv_sec + _end_time.tv_usec / 1000000.0) - (_start_time.tv_sec + _start_time.tv_usec / 1000000.0);
+
+		double GOPS = 200 * ((LOCAL_TESTS_PER_RUN / total_time) / 1e9);
+		sum += sum_arr(sum_v[0], sum_v[1], sum_v[2], sum_v[3]);
+
+		printf("sum: %d\n", sum);
+		printf("Completed %lu adds in %g seconds for %g GOPS.\n", LOCAL_TESTS_PER_RUN, total_time, GOPS);
+
+	}
+
+}
+
+/*
+add benchmark 9
+*/
+void add_microbenchmark9(char scale) {
+	double start_omp_time[4], total_time;
+	
+	int* sum_v[4];
+	int res[4] = { 0 };
+
+	srand(omp_get_wtime());
+
+	for (int core = 0; core < 4; core++) {
+		sum_v[core] = (int*)malloc(sizeof(int)*ARRAY_SIZE);
+
+		for (int i = 0; i < ARRAY_SIZE; i++) {
+			sum_v[core][i] = 42 + rand() / RAND_MAX * 100;
+		}
+
+	}
+#pragma omp parallel num_threads(4)
+	{
+		int j = 1;
+		printf("%d", j);
+	}
+
+	for (int run = 0; run < NUMBER_OF_RUNS; run++) {
+
+#pragma omp parallel num_threads(4)
+		{
+			int tid = omp_get_thread_num();
+			start_omp_time[tid] = omp_get_wtime();
+
+#pragma omp for
+			for (int test = 0; test < ARRAY_SIZE; test++) 
+			{
+				res[tid] += sum_v[tid][test];
+			}
+		}
+
+
+		total_time = omp_get_wtime() - start_omp_time[0];
+		//double time_in_sec = (_end_time.tv_sec + _end_time.tv_usec / 1000000.0) - (_start_time.tv_sec + _start_time.tv_usec / 1000000.0);
+
+		double GBs = (ARRAY_SIZE*4 / total_time) / 1e9;
+	
+		printf("sum: %d %d %d %d\n", res[0], res[1], res[2], res[3]);
+		printf("Completed time: %lf - GBs: %lf.\n", total_time, GBs);
+
+	}
+
+	free(sum_v[0]);
+	free(sum_v[1]);
+	free(sum_v[2]);
+	free(sum_v[3]);
+
 }

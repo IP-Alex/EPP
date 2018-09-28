@@ -1,1 +1,16 @@
-﻿cl : Command line error D8016: '/Ox' and '/RTC1' command-line options are incompatible
+﻿  add_benchmark.cpp
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(169): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(196): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(231): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(266): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(353): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(311): warning C4101: '_start_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(311): warning C4101: '_end_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(412): warning C4018: '<': signed/unsigned mismatch
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(382): warning C4101: '_start_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(382): warning C4101: '_end_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(448): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(482): warning C4477: 'printf' : format string '%d' requires an argument of type 'int', but variadic argument 1 has type 'double'
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(440): warning C4101: '_start_time': unreferenced local variable
+x:\documents\ppe\epp\microbenchmakrs\microbenchmakrs\add_benchmark.cpp(440): warning C4101: '_end_time': unreferenced local variable
+  Microbenchmakrs.vcxproj -> X:\Documents\PPE\EPP\Microbenchmakrs\Debug\Microbenchmakrs.exe
