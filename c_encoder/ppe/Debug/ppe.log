@@ -1,0 +1,8 @@
+﻿  custom_types.cpp
+  main.cpp
+c:\users\alla7073\downloads\video_compression\video_compression\c_encoder\ppe\main.cpp(25): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+  xml_aux.cpp
+  Generating Code...
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/PROFILE' specification
+custom_types.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:REF' specification
+  ppe.vcxproj -> C:\Users\alla7073\Downloads\video_compression\video_compression\c_encoder\Debug\ppe.exe
