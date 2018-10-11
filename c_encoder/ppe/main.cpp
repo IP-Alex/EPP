@@ -13,6 +13,8 @@
 #include "gettimeofday.h"
 #include "config.h"
 
+
+
 using namespace std;
 
 void loadImage(int number, string path, Image** photo) {
@@ -61,7 +63,7 @@ void convertRGBtoYCbCr(Image* in, Image* out) {
 	int width = in->width;
 	int height = in->height;
 
-
+#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x++) {
 		for (int y = 0; y<width; y++) {
 			float R = in->rc->data[x*width + y];
@@ -91,25 +93,27 @@ Channel* lowPass(Channel* in, Channel* out) {
 	int height = in->height;
 
 	//out = in; TODO Is this necessary?
+#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<width*height; i++) out->data[i] = in->data[i];
 
 
 	// In X
-	for (int x = 1; x<(height - 1); x++) {
-		for (int y = 1; y<(width - 1); y++) {
+#pragma omp parallel for num_threads(NUM_THREADS) 
+	for (int y = 1; y<(width - 1); y++) {
+		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * in->data[(x - 1)*width + y] + b * in->data[x*width + y] + c * in->data[(x + 1)*width + y];
 		}
 	}
 	// In Y
-	for (int x = 1; x<(height - 1); x++) {
-		for (int y = 1; y<(width - 1); y++) {
+#pragma omp parallel for num_threads(NUM_THREADS) 
+	for (int y = 1; y<(width - 1); y++) {
+		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * out->data[x*width + (y - 1)] + b * out->data[x*width + y] + c * out->data[x*width + (y + 1)];
 		}
 	}
 
 	return out;
 }
-
 
 std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width, int height) {
 	std::vector<mVector> *motion_vectors = new std::vector<mVector>(); // empty list of ints
@@ -239,12 +243,13 @@ void dct8x8(Channel* in, Channel* out) {
 	int height = in->height;
 
 	// 8x8 block dct on each block
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<width*height; i++) {
 		in->data[i] -= 128;
 		out->data[i] = 0; //zeros
 	}
 
-
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			dct8x8_block(&(in->data[x*width + y]), &(out->data[x*width + y]), width);
@@ -279,11 +284,12 @@ void quant8x8(Channel* in, Channel* out) {
 	int width = in->width;
 	int height = in->height;
 
+#pragma omp parallel for num_threads(NUM_THREADS)  //TODO - Figure out if this or memcpy is faster
 	for (int i = 0; i<width*height; i++) {
 		out->data[i] = 0; //zeros
 	}
 
-
+#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			round_block(&(in->data[x*width + y]), &(out->data[x*width + y]), width);
@@ -301,6 +307,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double* dc_values = new double[number_of_dc];
 
 	int iter = 0;
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<height; i += 8) {
 		for (int j = 0; j<width; j += 8) {
 			dc_values_transposed[iter] = in->data[i*width + j];
@@ -317,6 +324,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double prev = 0.;
 	iter = 0;
 
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<new_h; i++) {
 		for (int j = 0; j<new_w; j++) {
 			out->data[iter] = (float)(dc_values[i*new_w + j] - prev);
@@ -347,6 +355,7 @@ void zigZagOrder(Channel* in, Channel* ordered) {
 	int blockNumber = 0;
 	float _block[MPEG_CONSTANT];
 
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			cpyBlock(&(in->data[x*width + y]), _block, 8, width); //block = in(x:x+7,y:y+7);
@@ -363,12 +372,13 @@ void zigZagOrder(Channel* in, Channel* ordered) {
 }
 
 
-void encode8x8(Channel* ordered, SMatrix* encoded) {
+void encode8x8(Channel* ordered, SMatrix* encoded, std::string *Z_count) {
 	int width = encoded->height;
 	int height = encoded->width;
 	int num_blocks = height;
 	std::string block_encode[MPEG_CONSTANT] = { "\0" };
-	
+
+	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<num_blocks; i++) {
 		double* block = new double[width];
 		for (int y = 0; y<width; y++) block[y] = ordered->data[i*width + y];
@@ -390,7 +400,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded) {
 			else {
 				if (in_zero_run == 1) {
 					in_zero_run = 0;
-					block_encode[encoded_index] = "Z" + std::to_string(zero_count);
+					block_encode[encoded_index] = Z_count[zero_count];
 					encoded_index = encoded_index + 1;
 				}
 				block_encode[encoded_index] = std::to_string((int)coeff);
@@ -401,7 +411,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded) {
 		// If we were in a zero run at the end attach it as well.    
 		if (in_zero_run == 1) {
 			if (zero_count > 1) {
-				block_encode[encoded_index] = "Z" + std::to_string(zero_count);
+				block_encode[encoded_index] = Z_count[zero_count];
 			}
 			else {
 				block_encode[encoded_index] = "0";
@@ -448,6 +458,9 @@ int encode() {
 	stream = create_xml_stream(width, height, QUALITY, WINDOW_SIZE, BLOCK_SIZE);
 	vector<mVector>* motion_vectors = NULL;
 
+	//A bit less string constructions within the encode8x8 later on
+	std::string Z_count[MPEG_CONSTANT];
+	for (int i = 0; i < MPEG_CONSTANT; i++) Z_count[i] = "Z" + std::to_string(i); //Could probably do this compile time
 
 	for (int frame_number = 0; frame_number < end_frame; frame_number++) {
 		frame_rgb = NULL;
@@ -604,9 +617,9 @@ int encode() {
 		gettimeofday(&starttime, NULL);
 		FrameEncode* frame_encode = new FrameEncode(width, height, MPEG_CONSTANT);
 
-		encode8x8(frame_zigzag->Y, frame_encode->Y);
-		encode8x8(frame_zigzag->Cb, frame_encode->Cb);
-		encode8x8(frame_zigzag->Cr, frame_encode->Cr);
+		encode8x8(frame_zigzag->Y, frame_encode->Y, Z_count);
+		encode8x8(frame_zigzag->Cb, frame_encode->Cb, Z_count);
+		encode8x8(frame_zigzag->Cr, frame_encode->Cr, Z_count);
 		gettimeofday(&endtime, NULL);
 		runtime[9] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms  
 
@@ -636,6 +649,12 @@ int encode() {
 
 
 int main(int args, char** argv) {
+	struct timeval starttime, endtime;
+	gettimeofday(&starttime, NULL);
 	encode();
+	gettimeofday(&endtime, NULL);
+	double runtime = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms  
+	printf("Runtime: %lf\n", runtime);
+	system("pause");
 	return 0;
 }

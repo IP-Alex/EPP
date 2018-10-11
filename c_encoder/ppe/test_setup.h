@@ -2,7 +2,7 @@
 #define test_setup_h
 
 // Comment this line for profiling settings
-#define USE_MATLAB false
+//#define USE_MATLAB false
 
 //
 // Use these settings for comparing with MATLAB output
@@ -11,7 +11,7 @@
 
 #define N_FRAMES 2
 #define I_FRAME_FREQ 2
-#define DUMP_TO_DEBUG false
+#define DUMP_TO_DEBUG true
 #define image_name "blooper"
 
 #endif

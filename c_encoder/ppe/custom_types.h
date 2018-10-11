@@ -20,6 +20,10 @@ public:
 	Channel(int _width, int _height);
 
 	Channel(Channel* in);
+	//Channel(Channel& in);
+
+	//Channel& operator=(Channel& rhs);
+	
 
 	~Channel();
 	//void operator=(Channel* c);
@@ -43,18 +47,21 @@ public:
 };
 
 
-class Frame{
-	public:
-	Channel *Y;
-    Channel *Cb;
-    Channel *Cr;
-    int width;
-    int height;
-    // Flag to check if the image is downsampled or not
-    int type;
+class Frame {
+public:
+	Channel * Y;
+	Channel *Cb;
+	Channel *Cr;
+	int width;
+	int height;
+	// Flag to check if the image is downsampled or not
+	int type;
 
 	Frame(int _w, int _h, int _type);
 	Frame(Frame* in);
+	//Frame(Frame& in);
+
+	//Frame& operator=(Frame& rhs);
 
 	~Frame();
 

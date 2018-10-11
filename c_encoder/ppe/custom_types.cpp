@@ -34,6 +34,7 @@ Channel::Channel(Channel* in){
 		data[i] = in->data[i];
 }
 
+
 Channel::~Channel(){
 	delete data;
 }
@@ -55,6 +56,7 @@ void Channel::copy(Channel* ch){
 	this->width = ch->width;
 	this->height = ch->height;
 	
+//#pragma omp parallel for num_threads(NUM_THREADS)
 	for(int i=0; i<npixels; i++)
 		this->data[i] = ch->data[i];
 }
@@ -115,6 +117,7 @@ Frame::Frame(Frame* in){
 
 }
 
+
 Frame::~Frame(){
 	delete Y;
 	delete Cb;
@@ -123,7 +126,6 @@ Frame::~Frame(){
 	Cb=NULL;
 	Cr=NULL;
 }
-
 
 
 SMatrix::SMatrix(int _width, int _height){

@@ -12,6 +12,8 @@
 
 #define MPEG_CONSTANT 64
 
+#define NUM_THREADS 4
+
 #include "test_setup.h"
 
 #endif
