@@ -464,6 +464,9 @@ int encode() {
 #else
 	Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
 	Frame *frame_lowpassed_final = new Frame(width, height, FULLSIZE);
+	Image* frame_ycbcr = new Image(width, height, FULLSIZE);
+	Channel* frame_blur_cb = new Channel(width, height);
+	Channel* frame_blur_cr = new Channel(width, height);
 #endif
 
 	createStatsFile();
@@ -483,7 +486,9 @@ int encode() {
 		//  Convert to YCbCr
 		print("Covert to YCbCr...");
 
+#if origptr == true
 		Image* frame_ycbcr = new Image(width, height, FULLSIZE);
+#endif
 		gettimeofday(&starttime, NULL);
 		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
 		gettimeofday(&endtime, NULL);
@@ -498,27 +503,35 @@ int encode() {
 
 		gettimeofday(&starttime, NULL);
 
+#if origptr == true
 		Channel* frame_blur_cb = new Channel(width, height);
 		Channel* frame_blur_cr = new Channel(width, height);
-#if origptr == true
+
 		Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
 #endif
 
 		lowPass(frame_ycbcr->gc, frame_blur_cb);
 		lowPass(frame_ycbcr->bc, frame_blur_cr);
 
-		frame_lowpassed->Y->copy(frame_ycbcr->rc);
-		frame_lowpassed->Cb->copy(frame_blur_cb);
-		frame_lowpassed->Cr->copy(frame_blur_cr);
+#if origptr == true
+		//frame_lowpassed->Y->copy(frame_ycbcr->rc);
+		//frame_lowpassed->Cb->copy(frame_blur_cb);
+		//frame_lowpassed->Cr->copy(frame_blur_cr);
+#else
+		*frame_lowpassed->Y = *frame_ycbcr->rc;
+		*frame_lowpassed->Cb = *frame_blur_cb;
+		*frame_lowpassed->Cr = *frame_blur_cr;
+#endif
 		gettimeofday(&endtime, NULL);
 		runtime[1] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms   
 
 		dump_frame(frame_lowpassed, "frame_ycbcr_lowpass", frame_number);
 
+#if origptr == true
 		delete frame_ycbcr;
 		delete frame_blur_cb;
 		delete frame_blur_cr;
-#if origptr == true
+
 		Frame *frame_lowpassed_final = NULL;
 #endif
 
@@ -676,6 +689,10 @@ int encode() {
 	delete frame_rgb;
 	delete frame_lowpassed;
 	delete frame_lowpassed_final;
+
+	delete frame_ycbcr;
+	delete frame_blur_cb;
+	delete frame_blur_cr;
 #endif
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */

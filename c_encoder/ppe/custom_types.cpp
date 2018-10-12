@@ -51,18 +51,19 @@ Channel::Channel(Channel&& rhs) {
 	height = rhs.height;
 	data = rhs.data;
 	rhs.data = nullptr;
-	printf("Move Channel\n");
+	//printf("Move Channel\n");
 }
 
 
 Channel& Channel::operator=(Channel& rhs) {
 	if (this != &rhs) {
 		Channel temp(rhs);
-		*this = std::move(rhs);
+		std::swap(*this, temp);
+		//*this = std::move(temp);
 	}
 	return *this;
 }
-/*
+
 Channel& Channel::operator=(Channel&& rhs) {
 	if (this != &rhs) {
 		width = rhs.width;
@@ -71,13 +72,14 @@ Channel& Channel::operator=(Channel&& rhs) {
 		rhs.data = nullptr;
 	}
 
-	printf("Move Assign Channel\n");
+	//printf("Move Assign Channel\n");
 	return *this;
 }
-*/
+
 
 Channel::~Channel(){
-	delete[] data;
+	if(data != nullptr)
+		delete[] data;
 }
 
 
@@ -173,18 +175,18 @@ Frame::Frame(Frame&& in) {
 	in.Cb = nullptr;
 	in.Cr = nullptr;
 
-	printf("Move Frame\n");
+	//printf("Move Frame\n");
 }
 
 Frame& Frame::operator=(Frame& rhs) {
 	if (this != &rhs) {
 		Frame temp(rhs);
-		*this = std::move(rhs);
-		//std::swap(*this, rhs);
+		//*this = std::move(temp);
+		std::swap(*this, rhs);
 	}
 	return *this;
 }
-/*
+
 Frame& Frame::operator=(Frame&& rhs) {
 	if (this != &rhs) {
 		width = rhs.width;
@@ -200,17 +202,24 @@ Frame& Frame::operator=(Frame&& rhs) {
 		rhs.Cr = nullptr;
 	}
 
-	printf("Move Assign Frame\n");
+	//printf("Move Assign Frame\n");
 	return *this;
-}*/
+}
 
 Frame::~Frame(){
-	delete Y;
-	delete Cb;
-	delete Cr;
-	Y=NULL;
-	Cb=NULL;
-	Cr=NULL;
+	if (Y != nullptr) {
+		delete Y;
+		Y = nullptr;
+	}
+	if (Cb != nullptr)
+	{
+		delete Cb;
+		Cb = nullptr;
+	}
+	if (Cr != nullptr) {
+		delete Cr;
+		Cr = nullptr;
+	}
 }
 
 

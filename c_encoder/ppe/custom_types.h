@@ -24,7 +24,7 @@ public:
 	Channel(Channel&& in);
 
 	Channel& operator=(Channel& rhs);
-	//Channel& operator=(Channel&& rhs);
+	Channel& operator=(Channel&& rhs);
 
 	~Channel();
 	//void operator=(Channel* c);
@@ -64,7 +64,7 @@ public:
 	Frame(Frame&& in);
 
 	Frame& operator=(Frame& rhs);
-	//Frame& operator=(Frame&& rhs);
+	Frame& operator=(Frame&& rhs);
 
 	~Frame();
 
