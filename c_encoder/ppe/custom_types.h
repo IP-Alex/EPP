@@ -20,10 +20,11 @@ public:
 	Channel(int _width, int _height);
 
 	Channel(Channel* in);
-	//Channel(Channel& in);
+	Channel(Channel& in);
+	Channel(Channel&& in);
 
-	//Channel& operator=(Channel& rhs);
-	
+	Channel& operator=(Channel& rhs);
+	//Channel& operator=(Channel&& rhs);
 
 	~Channel();
 	//void operator=(Channel* c);
@@ -49,7 +50,7 @@ public:
 
 class Frame {
 public:
-	Channel * Y;
+	Channel *Y;
 	Channel *Cb;
 	Channel *Cr;
 	int width;
@@ -59,9 +60,11 @@ public:
 
 	Frame(int _w, int _h, int _type);
 	Frame(Frame* in);
-	//Frame(Frame& in);
+	Frame(Frame& in);
+	Frame(Frame&& in);
 
-	//Frame& operator=(Frame& rhs);
+	Frame& operator=(Frame& rhs);
+	//Frame& operator=(Frame&& rhs);
 
 	~Frame();
 

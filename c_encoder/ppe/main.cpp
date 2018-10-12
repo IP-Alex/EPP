@@ -13,7 +13,7 @@
 #include "gettimeofday.h"
 #include "config.h"
 
-
+#define origptr false
 
 using namespace std;
 
@@ -81,7 +81,8 @@ void convertRGBtoYCbCr(Image* in, Image* out) {
 	//return out;
 }
 
-Channel* lowPass(Channel* in, Channel* out) {
+//Channel* lowPass(Channel* in, Channel* out) {
+void lowPass(Channel* in, Channel* out) {
 	// Applies a simple 3-tap low-pass filter in the X- and Y- dimensions.
 	// E.g., blur
 	// weights for neighboring pixels
@@ -93,26 +94,26 @@ Channel* lowPass(Channel* in, Channel* out) {
 	int height = in->height;
 
 	//out = in; TODO Is this necessary?
-#pragma omp parallel for num_threads(NUM_THREADS) 
+//#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<width*height; i++) out->data[i] = in->data[i];
 
 
 	// In X
-#pragma omp parallel for num_threads(NUM_THREADS) 
+//#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int y = 1; y<(width - 1); y++) {
 		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * in->data[(x - 1)*width + y] + b * in->data[x*width + y] + c * in->data[(x + 1)*width + y];
 		}
 	}
 	// In Y
-#pragma omp parallel for num_threads(NUM_THREADS) 
+//#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int y = 1; y<(width - 1); y++) {
 		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * out->data[x*width + (y - 1)] + b * out->data[x*width + y] + c * out->data[x*width + (y + 1)];
 		}
 	}
 
-	return out;
+	//return out;
 }
 
 std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width, int height) {
@@ -177,8 +178,12 @@ std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width,
 }
 
 
+#if origptr == true
 Frame* computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors) {
 	Frame *delta = new Frame(p_frame_ycbcr);
+#else
+void computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors, Frame* delta) {
+#endif
 
 	int width = i_frame_ycbcr->width;
 	int height = i_frame_ycbcr->height;
@@ -212,7 +217,7 @@ Frame* computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVec
 			current_block = current_block + 1;
 		}
 	}
-	return delta;
+	//return delta;
 }
 
 
@@ -307,7 +312,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double* dc_values = new double[number_of_dc];
 
 	int iter = 0;
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+	//#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<height; i += 8) {
 		for (int j = 0; j<width; j += 8) {
 			dc_values_transposed[iter] = in->data[i*width + j];
@@ -324,7 +329,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double prev = 0.;
 	iter = 0;
 
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+	//#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<new_h; i++) {
 		for (int j = 0; j<new_w; j++) {
 			out->data[iter] = (float)(dc_values[i*new_w + j] - prev);
@@ -354,13 +359,14 @@ void zigZagOrder(Channel* in, Channel* ordered) {
 
 	int blockNumber = 0;
 	float _block[MPEG_CONSTANT];
+	float zigZagOrdered[MPEG_CONSTANT] = { 0 };
 
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+	//ragma omp parallel for num_threads(NUM_THREADS) pvate(zigZagOrdered, _block)
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			cpyBlock(&(in->data[x*width + y]), _block, 8, width); //block = in(x:x+7,y:y+7);
 																  //Put the coefficients in zig-zag order
-			float zigZagOrdered[MPEG_CONSTANT] = { 0 };
+			
 			for (int index = 0; index < MPEG_CONSTANT; index++) {
 				zigZagOrdered[index] = _block[zigZagIndex[index]];
 			}
@@ -452,7 +458,13 @@ int encode() {
 	int height = frame_rgb->height;
 	int npixels = width * height;
 
+#if origptr == true
 	delete frame_rgb;
+
+#else
+	Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
+	Frame *frame_lowpassed_final = new Frame(width, height, FULLSIZE);
+#endif
 
 	createStatsFile();
 	stream = create_xml_stream(width, height, QUALITY, WINDOW_SIZE, BLOCK_SIZE);
@@ -463,7 +475,9 @@ int encode() {
 	for (int i = 0; i < MPEG_CONSTANT; i++) Z_count[i] = "Z" + std::to_string(i); //Could probably do this compile time
 
 	for (int frame_number = 0; frame_number < end_frame; frame_number++) {
+#if origptr == true		
 		frame_rgb = NULL;
+#endif
 		loadImage(frame_number, image_path, &frame_rgb);
 
 		//  Convert to YCbCr
@@ -476,15 +490,19 @@ int encode() {
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
 
 		dump_image(frame_ycbcr, "frame_ycbcr", frame_number);
+#if origptr == true
 		delete frame_rgb;
-
+#endif
 		// We low pass filter Cb and Cr channesl
 		print("Low pass filter...");
 
 		gettimeofday(&starttime, NULL);
+
 		Channel* frame_blur_cb = new Channel(width, height);
 		Channel* frame_blur_cr = new Channel(width, height);
+#if origptr == true
 		Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
+#endif
 
 		lowPass(frame_ycbcr->gc, frame_blur_cb);
 		lowPass(frame_ycbcr->bc, frame_blur_cr);
@@ -496,11 +514,13 @@ int encode() {
 		runtime[1] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms   
 
 		dump_frame(frame_lowpassed, "frame_ycbcr_lowpass", frame_number);
+
 		delete frame_ycbcr;
 		delete frame_blur_cb;
 		delete frame_blur_cr;
-
+#if origptr == true
 		Frame *frame_lowpassed_final = NULL;
+#endif
 
 		if (frame_number % i_frame_frequency != 0) {
 			// We have a P frame 
@@ -516,7 +536,12 @@ int encode() {
 
 			print("Compute Delta...");
 			gettimeofday(&starttime, NULL);
+
+#if origptr == true
 			frame_lowpassed_final = computeDelta(previous_frame_lowpassed, frame_lowpassed, motion_vectors);
+#else
+			computeDelta(previous_frame_lowpassed, frame_lowpassed, motion_vectors, frame_lowpassed_final);
+#endif
 			gettimeofday(&endtime, NULL);
 			runtime[3] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
 
@@ -524,9 +549,15 @@ int encode() {
 		else {
 			// We have a I frame 
 			motion_vectors = NULL;
+#if origptr == true
 			frame_lowpassed_final = new Frame(frame_lowpassed);
+#else
+			*frame_lowpassed_final = *frame_lowpassed;
+#endif
 		}
+#if origptr == true
 		delete frame_lowpassed; frame_lowpassed = NULL;
+#endif
 
 		if (frame_number > 0) delete previous_frame_lowpassed;
 		previous_frame_lowpassed = new Frame(frame_lowpassed_final);
@@ -548,7 +579,9 @@ int encode() {
 		runtime[4] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
 
 		dump_frame(frame_downsampled, "frame_downsampled", frame_number);
+#if origptr == true
 		delete frame_lowpassed_final;
+#endif
 		delete frame_downsampled_cb;
 		delete frame_downsampled_cr;
 
@@ -639,10 +672,16 @@ int encode() {
 		writestats(frame_number, frame_number % i_frame_frequency, runtime);
 
 	}
-
+#if origptr != true
+	delete frame_rgb;
+	delete frame_lowpassed;
+	delete frame_lowpassed_final;
+#endif
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */
 	//system("pause");
+
+	
 
 	return 0;
 }

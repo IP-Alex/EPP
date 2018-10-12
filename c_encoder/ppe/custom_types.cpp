@@ -34,21 +34,52 @@ Channel::Channel(Channel* in){
 		data[i] = in->data[i];
 }
 
+Channel::Channel(Channel& in) {
+	width = in.width;
+	height = in.height;
+	int npixels = in.width*in.height;
 
-Channel::~Channel(){
-	delete data;
+	data = new float[npixels];
+
+#pragma omp parallel for num_threads(NUM_THREADS)
+	for (int i = 0; i<npixels; i++)
+		this->data[i] = in.data[i];
+}
+
+Channel::Channel(Channel&& rhs) {
+	width = rhs.width;
+	height = rhs.height;
+	data = rhs.data;
+	rhs.data = nullptr;
+	printf("Move Channel\n");
+}
+
+
+Channel& Channel::operator=(Channel& rhs) {
+	if (this != &rhs) {
+		Channel temp(rhs);
+		*this = std::move(rhs);
+	}
+	return *this;
 }
 /*
-void Channel::operator=(Channel* ch){
-	int npixels = ch->width * ch->height;
-	
-	this->width = ch->width;
-	this->height = ch->height;
-	
-	for(int i=0; i<npixels; i++)
-		this->data[i] = ch->data[i];
+Channel& Channel::operator=(Channel&& rhs) {
+	if (this != &rhs) {
+		width = rhs.width;
+		height = rhs.height;
+		data = rhs.data;
+		rhs.data = nullptr;
+	}
+
+	printf("Move Assign Channel\n");
+	return *this;
 }
 */
+
+Channel::~Channel(){
+	delete[] data;
+}
+
 
 void Channel::copy(Channel* ch){
 	int npixels = ch->width * ch->height;
@@ -56,7 +87,7 @@ void Channel::copy(Channel* ch){
 	this->width = ch->width;
 	this->height = ch->height;
 	
-//#pragma omp parallel for num_threads(NUM_THREADS)
+#pragma omp parallel for num_threads(NUM_THREADS)
 	for(int i=0; i<npixels; i++)
 		this->data[i] = ch->data[i];
 }
@@ -117,6 +148,61 @@ Frame::Frame(Frame* in){
 
 }
 
+
+Frame::Frame(Frame& in) {
+	width = in.width;
+	height = in.height;
+	type = in.type;
+
+	Y = new Channel(in.Y);
+	Cb = new Channel(in.Cb);
+	Cr = new Channel(in.Cr);
+}
+
+
+Frame::Frame(Frame&& in) {
+	width = in.width;
+	height = in.height;
+	type = in.type;
+
+	Y = in.Y;
+	Cb = in.Cb;
+	Cr = in.Cr;
+
+	in.Y = nullptr;
+	in.Cb = nullptr;
+	in.Cr = nullptr;
+
+	printf("Move Frame\n");
+}
+
+Frame& Frame::operator=(Frame& rhs) {
+	if (this != &rhs) {
+		Frame temp(rhs);
+		*this = std::move(rhs);
+		//std::swap(*this, rhs);
+	}
+	return *this;
+}
+/*
+Frame& Frame::operator=(Frame&& rhs) {
+	if (this != &rhs) {
+		width = rhs.width;
+		height = rhs.height;
+		type = rhs.type;
+
+		Y = rhs.Y;
+		Cb = rhs.Cb;
+		Cr = rhs.Cr;
+
+		rhs.Y = nullptr;
+		rhs.Cb = nullptr;
+		rhs.Cr = nullptr;
+	}
+
+	printf("Move Assign Frame\n");
+	return *this;
+}*/
 
 Frame::~Frame(){
 	delete Y;
