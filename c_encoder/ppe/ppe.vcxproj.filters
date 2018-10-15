@@ -30,6 +30,9 @@
     <ClCompile Include="gettimeofday.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="opencl_helper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="custom_types.h">
@@ -53,5 +56,13 @@
     <ClInclude Include="gettimeofday.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="opencl_helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="kernel.cl">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

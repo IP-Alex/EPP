@@ -12,8 +12,10 @@
 #include <vector>
 #include "gettimeofday.h"
 #include "config.h"
+#include "opencl_helper.h"
 
-#define origptr false
+
+#define origptr true
 
 using namespace std;
 
@@ -39,7 +41,7 @@ void loadImage(int number, string path, Image** photo) {
 	TIFFReadRGBAImage(tif, w, h, raster, 0);
 
 	if (*photo == NULL)
-		*photo = new Image((int)w, (int)h, FULLSIZE);
+		*photo = DBG_NEW Image((int)w, (int)h, FULLSIZE);
 
 	//Matlab and LibTIFF store the image diferently.
 	//Necessary to mirror the image horizonatly to be consistent
@@ -117,7 +119,7 @@ void lowPass(Channel* in, Channel* out) {
 }
 
 std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width, int height) {
-	std::vector<mVector> *motion_vectors = new std::vector<mVector>(); // empty list of ints
+	std::vector<mVector> *motion_vectors = DBG_NEW std::vector<mVector>(); // empty list of ints
 
 	float Y_weight = 0.5;
 	float Cr_weight = 0.25;
@@ -180,7 +182,7 @@ std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width,
 
 #if origptr == true
 Frame* computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors) {
-	Frame *delta = new Frame(p_frame_ycbcr);
+	Frame *delta = DBG_NEW Frame(p_frame_ycbcr);
 #else
 void computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors, Frame* delta) {
 #endif
@@ -227,7 +229,7 @@ Channel* downSample(Channel* in) {
 	int w2 = width / 2;
 	int h2 = height / 2;
 
-	Channel* out = new Channel((width / 2), (height / 2));
+	Channel* out = DBG_NEW Channel((width / 2), (height / 2));
 
 
 	for (int x2 = 0, x = 0; x2<h2; x2++) {
@@ -308,8 +310,8 @@ void dcDiff(Channel* in, Channel* out) {
 	int height = in->height;
 
 	int number_of_dc = width * height / 64;
-	double* dc_values_transposed = new double[number_of_dc];
-	double* dc_values = new double[number_of_dc];
+	double* dc_values_transposed = DBG_NEW double[number_of_dc];
+	double* dc_values = DBG_NEW double[number_of_dc];
 
 	int iter = 0;
 	//#pragma omp parallel for num_threads(NUM_THREADS) 
@@ -386,7 +388,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded, std::string *Z_count) {
 
 	#pragma omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<num_blocks; i++) {
-		double* block = new double[width];
+		double* block = DBG_NEW double[width];
 		for (int y = 0; y<width; y++) block[y] = ordered->data[i*width + y];
 		int num_coeff = MPEG_CONSTANT; //width
 		int encoded_index = 0;
@@ -427,7 +429,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded, std::string *Z_count) {
 
 		for (int it = 0; it < MPEG_CONSTANT; it++) {
 			if (block_encode[it].length() > 0)
-				encoded->data[i*width + it] = new std::string(block_encode[it]);
+				encoded->data[i*width + it] = &block_encode[it];//DBG_NEW std::string(block_encode[it]);
 			else
 				it = MPEG_CONSTANT;
 		}
@@ -462,11 +464,11 @@ int encode() {
 	delete frame_rgb;
 
 #else
-	Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
-	Frame *frame_lowpassed_final = new Frame(width, height, FULLSIZE);
-	Image* frame_ycbcr = new Image(width, height, FULLSIZE);
-	Channel* frame_blur_cb = new Channel(width, height);
-	Channel* frame_blur_cr = new Channel(width, height);
+	Frame *frame_lowpassed = DBG_NEW Frame(width, height, FULLSIZE);
+	Frame *frame_lowpassed_final = DBG_NEW Frame(width, height, FULLSIZE);
+	Image* frame_ycbcr = DBG_NEW Image(width, height, FULLSIZE);
+	Channel* frame_blur_cb = DBG_NEW Channel(width, height);
+	Channel* frame_blur_cr = DBG_NEW Channel(width, height);
 #endif
 
 	createStatsFile();
@@ -477,20 +479,22 @@ int encode() {
 	std::string Z_count[MPEG_CONSTANT];
 	for (int i = 0; i < MPEG_CONSTANT; i++) Z_count[i] = "Z" + std::to_string(i); //Could probably do this compile time
 
+
 	for (int frame_number = 0; frame_number < end_frame; frame_number++) {
 #if origptr == true		
 		frame_rgb = NULL;
 #endif
-		loadImage(frame_number, image_path, &frame_rgb);
+		loadImage(frame_number, image_path, &frame_rgb);//cpu&disk
 
 		//  Convert to YCbCr
 		print("Covert to YCbCr...");
 
 #if origptr == true
-		Image* frame_ycbcr = new Image(width, height, FULLSIZE);
+		Image* frame_ycbcr = DBG_NEW Image(width, height, FULLSIZE);
 #endif
+
 		gettimeofday(&starttime, NULL);
-		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);
+		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);//Go gpu
 		gettimeofday(&endtime, NULL);
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
 
@@ -504,24 +508,25 @@ int encode() {
 		gettimeofday(&starttime, NULL);
 
 #if origptr == true
-		Channel* frame_blur_cb = new Channel(width, height);
-		Channel* frame_blur_cr = new Channel(width, height);
+		Channel* frame_blur_cb = DBG_NEW Channel(width, height);
+		Channel* frame_blur_cr = DBG_NEW Channel(width, height);
 
-		Frame *frame_lowpassed = new Frame(width, height, FULLSIZE);
+		Frame *frame_lowpassed = DBG_NEW Frame(width, height, FULLSIZE);
 #endif
 
-		lowPass(frame_ycbcr->gc, frame_blur_cb);
+		lowPass(frame_ycbcr->gc, frame_blur_cb); //Go gpu
 		lowPass(frame_ycbcr->bc, frame_blur_cr);
 
 #if origptr == true
-		//frame_lowpassed->Y->copy(frame_ycbcr->rc);
-		//frame_lowpassed->Cb->copy(frame_blur_cb);
-		//frame_lowpassed->Cr->copy(frame_blur_cr);
+		frame_lowpassed->Y->copy(frame_ycbcr->rc);
+		frame_lowpassed->Cb->copy(frame_blur_cb);
+		frame_lowpassed->Cr->copy(frame_blur_cr);
 #else
 		*frame_lowpassed->Y = *frame_ycbcr->rc;
 		*frame_lowpassed->Cb = *frame_blur_cb;
 		*frame_lowpassed->Cr = *frame_blur_cr;
 #endif
+
 		gettimeofday(&endtime, NULL);
 		runtime[1] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms   
 
@@ -535,6 +540,7 @@ int encode() {
 		Frame *frame_lowpassed_final = NULL;
 #endif
 
+		//Go gpu
 		if (frame_number % i_frame_frequency != 0) {
 			// We have a P frame 
 			// Note that in the first iteration we don't enter this branch!
@@ -563,7 +569,7 @@ int encode() {
 			// We have a I frame 
 			motion_vectors = NULL;
 #if origptr == true
-			frame_lowpassed_final = new Frame(frame_lowpassed);
+			frame_lowpassed_final = DBG_NEW Frame(frame_lowpassed);
 #else
 			*frame_lowpassed_final = *frame_lowpassed;
 #endif
@@ -573,14 +579,14 @@ int encode() {
 #endif
 
 		if (frame_number > 0) delete previous_frame_lowpassed;
-		previous_frame_lowpassed = new Frame(frame_lowpassed_final);
+		previous_frame_lowpassed = DBG_NEW Frame(frame_lowpassed_final);
 
 
 		// Downsample the difference
 		print("Downsample...");
 
 		gettimeofday(&starttime, NULL);
-		Frame* frame_downsampled = new Frame(width, height, DOWNSAMPLE);
+		Frame* frame_downsampled = DBG_NEW Frame(width, height, DOWNSAMPLE);
 
 		// We don't touch the Y frame
 		frame_downsampled->Y->copy(frame_lowpassed_final->Y);
@@ -602,9 +608,9 @@ int encode() {
 		print("Convert to frequency domain...");
 
 		gettimeofday(&starttime, NULL);
-		Frame* frame_dct = new Frame(width, height, DOWNSAMPLE);
+		Frame* frame_dct = DBG_NEW Frame(width, height, DOWNSAMPLE);
 
-		dct8x8(frame_downsampled->Y, frame_dct->Y);
+		dct8x8(frame_downsampled->Y, frame_dct->Y);//Go gpu
 		dct8x8(frame_downsampled->Cb, frame_dct->Cb);
 		dct8x8(frame_downsampled->Cr, frame_dct->Cr);
 		gettimeofday(&endtime, NULL);
@@ -617,9 +623,9 @@ int encode() {
 		print("Quantize...");
 
 		gettimeofday(&starttime, NULL);
-		Frame* frame_quant = new Frame(width, height, DOWNSAMPLE);
+		Frame* frame_quant = DBG_NEW Frame(width, height, DOWNSAMPLE);
 
-		quant8x8(frame_dct->Y, frame_quant->Y);
+		quant8x8(frame_dct->Y, frame_quant->Y);//Go gpu
 		quant8x8(frame_dct->Cb, frame_quant->Cb);
 		quant8x8(frame_dct->Cr, frame_quant->Cr);
 		gettimeofday(&endtime, NULL);
@@ -632,7 +638,7 @@ int encode() {
 		print("Compute DC differences...");
 
 		gettimeofday(&starttime, NULL);
-		Frame* frame_dc_diff = new Frame(1, (width / 8)*(height / 8), DCDIFF); //dealocate later
+		Frame* frame_dc_diff = DBG_NEW Frame(1, (width / 8)*(height / 8), DCDIFF); //dealocate later
 
 		dcDiff(frame_quant->Y, frame_dc_diff->Y);
 		dcDiff(frame_quant->Cb, frame_dc_diff->Cb);
@@ -646,7 +652,7 @@ int encode() {
 		print("Zig-zag order...");
 		gettimeofday(&starttime, NULL);
 
-		Frame* frame_zigzag = new Frame(MPEG_CONSTANT, width*height / MPEG_CONSTANT, ZIGZAG);
+		Frame* frame_zigzag = DBG_NEW Frame(MPEG_CONSTANT, width*height / MPEG_CONSTANT, ZIGZAG);
 
 		zigZagOrder(frame_quant->Y, frame_zigzag->Y);
 		zigZagOrder(frame_quant->Cb, frame_zigzag->Cb);
@@ -661,7 +667,7 @@ int encode() {
 		print("Encode coefficients...");
 
 		gettimeofday(&starttime, NULL);
-		FrameEncode* frame_encode = new FrameEncode(width, height, MPEG_CONSTANT);
+		FrameEncode* frame_encode = DBG_NEW FrameEncode(width, height, MPEG_CONSTANT);
 
 		encode8x8(frame_zigzag->Y, frame_encode->Y, Z_count);
 		encode8x8(frame_zigzag->Cb, frame_encode->Cb, Z_count);
@@ -694,6 +700,8 @@ int encode() {
 	delete frame_blur_cb;
 	delete frame_blur_cr;
 #endif
+	delete previous_frame_lowpassed;
+
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */
 	//system("pause");
@@ -711,6 +719,7 @@ int main(int args, char** argv) {
 	gettimeofday(&endtime, NULL);
 	double runtime = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms  
 	printf("Runtime: %lf\n", runtime);
+	_CrtDumpMemoryLeaks();
 	system("pause");
 	return 0;
 }

@@ -20,7 +20,7 @@ float round(float number){
 Channel::Channel(int _width, int _height){
 	width = _width;
 	height = _height;
-	data = new float[_width*_height];
+	data = DBG_NEW float[_width*_height];
 }
 
 Channel::Channel(Channel* in){
@@ -28,7 +28,7 @@ Channel::Channel(Channel* in){
 	height = in->height;
 	
 	int npixels = in->width*in->height;
-	data = new float[npixels];
+	data = DBG_NEW float[npixels];
 	
 	for(int i=0; i<npixels; i++)
 		data[i] = in->data[i];
@@ -39,7 +39,7 @@ Channel::Channel(Channel& in) {
 	height = in.height;
 	int npixels = in.width*in.height;
 
-	data = new float[npixels];
+	data = DBG_NEW float[npixels];
 
 #pragma omp parallel for num_threads(NUM_THREADS)
 	for (int i = 0; i<npixels; i++)
@@ -99,13 +99,13 @@ Image::Image(int _w, int _h, int _type){
 	height = _h;
 	type = _type;
 
-	rc = new Channel(_w, _h);
+	rc = DBG_NEW Channel(_w, _h);
 	if (_type == DOWNSAMPLE) {
 		_w = _w/2;
 		_h = _h/2;
 	}
-	gc = new Channel(_w, _h);
-	bc = new Channel(_w, _h);
+	gc = DBG_NEW Channel(_w, _h);
+	bc = DBG_NEW Channel(_w, _h);
 }
 
 Image::~Image(){
@@ -122,7 +122,7 @@ Frame::Frame(int _w, int _h, int _type){
 	height = _h;
 	type = _type;
 
-	Y = new Channel(_w, _h);
+	Y = DBG_NEW Channel(_w, _h);
 	if (_type == DOWNSAMPLE) {
 		_w = _w/2;
 		_h = _h/2;
@@ -135,8 +135,8 @@ Frame::Frame(int _w, int _h, int _type){
 		_h = _h/4;
 	}
 
-	Cb = new Channel(_w, _h);
-	Cr = new Channel(_w, _h);
+	Cb = DBG_NEW Channel(_w, _h);
+	Cr = DBG_NEW Channel(_w, _h);
 }
 
 Frame::Frame(Frame* in){
@@ -144,9 +144,9 @@ Frame::Frame(Frame* in){
 	height = in->height;
 	type = in->type;
 
-	Y = new Channel(in->Y);
-	Cb = new Channel(in->Cb);
-	Cr = new Channel(in->Cr);
+	Y = DBG_NEW Channel(in->Y);
+	Cb = DBG_NEW Channel(in->Cb);
+	Cr = DBG_NEW Channel(in->Cr);
 
 }
 
@@ -156,9 +156,9 @@ Frame::Frame(Frame& in) {
 	height = in.height;
 	type = in.type;
 
-	Y = new Channel(in.Y);
-	Cb = new Channel(in.Cb);
-	Cr = new Channel(in.Cr);
+	Y = DBG_NEW Channel(in.Y);
+	Cb = DBG_NEW Channel(in.Cb);
+	Cr = DBG_NEW Channel(in.Cr);
 }
 
 
@@ -227,7 +227,7 @@ SMatrix::SMatrix(int _width, int _height){
 	width = _width;
 	height = _height;
 	//data = (std::string**)malloc(_width*_height*sizeof(std::string*));
-	data = new std::string*[_width*_height];
+	data = DBG_NEW std::string*[_width*_height];
 	for(int i=0; i<_width*_height; i++) data[i] = NULL;
 }
 
@@ -242,9 +242,9 @@ FrameEncode::FrameEncode(int _w, int _h, int _mpg){
 	width = _w*_h/MPEG_CONSTANT;
 	height = MPEG_CONSTANT;
 
-	Y = new SMatrix(_w*_h/MPEG_CONSTANT, MPEG_CONSTANT);
-	Cb = new SMatrix((_w/2)*(_h/2)/MPEG_CONSTANT, MPEG_CONSTANT);
-	Cr = new SMatrix((_w/2)*(_h/2)/MPEG_CONSTANT, MPEG_CONSTANT);
+	Y = DBG_NEW SMatrix(_w*_h/MPEG_CONSTANT, MPEG_CONSTANT);
+	Cb = DBG_NEW SMatrix((_w/2)*(_h/2)/MPEG_CONSTANT, MPEG_CONSTANT);
+	Cr = DBG_NEW SMatrix((_w/2)*(_h/2)/MPEG_CONSTANT, MPEG_CONSTANT);
 }
 
 
