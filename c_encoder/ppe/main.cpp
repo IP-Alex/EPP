@@ -459,17 +459,8 @@ int encode() {
 	int width = frame_rgb->width;
 	int height = frame_rgb->height;
 	int npixels = width * height;
-
-#if origptr == true
+	
 	delete frame_rgb;
-
-#else
-	Frame *frame_lowpassed = DBG_NEW Frame(width, height, FULLSIZE);
-	Frame *frame_lowpassed_final = DBG_NEW Frame(width, height, FULLSIZE);
-	Image* frame_ycbcr = DBG_NEW Image(width, height, FULLSIZE);
-	Channel* frame_blur_cb = DBG_NEW Channel(width, height);
-	Channel* frame_blur_cr = DBG_NEW Channel(width, height);
-#endif
 
 	createStatsFile();
 	stream = create_xml_stream(width, height, QUALITY, WINDOW_SIZE, BLOCK_SIZE);
@@ -481,132 +472,98 @@ int encode() {
 
 
 	for (int frame_number = 0; frame_number < end_frame; frame_number++) {
-#if origptr == true		
 		frame_rgb = NULL;
-#endif
 		loadImage(frame_number, image_path, &frame_rgb);//cpu&disk
 
 		//  Convert to YCbCr
 		print("Covert to YCbCr...");
-
-#if origptr == true
 		Image* frame_ycbcr = DBG_NEW Image(width, height, FULLSIZE);
-#endif
-
 		gettimeofday(&starttime, NULL);
+
 		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);//Go gpu
+
 		gettimeofday(&endtime, NULL);
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
-
 		dump_image(frame_ycbcr, "frame_ycbcr", frame_number);
-#if origptr == true
 		delete frame_rgb;
-#endif
+
 		// We low pass filter Cb and Cr channesl
 		print("Low pass filter...");
-
 		gettimeofday(&starttime, NULL);
-
-#if origptr == true
 		Channel* frame_blur_cb = DBG_NEW Channel(width, height);
 		Channel* frame_blur_cr = DBG_NEW Channel(width, height);
-
 		Frame *frame_lowpassed = DBG_NEW Frame(width, height, FULLSIZE);
-#endif
 
 		lowPass(frame_ycbcr->gc, frame_blur_cb); //Go gpu
-		lowPass(frame_ycbcr->bc, frame_blur_cr);
+		lowPass(frame_ycbcr->bc, frame_blur_cr); //Go gpu
 
-#if origptr == true
 		frame_lowpassed->Y->copy(frame_ycbcr->rc);
 		frame_lowpassed->Cb->copy(frame_blur_cb);
 		frame_lowpassed->Cr->copy(frame_blur_cr);
-#else
-		*frame_lowpassed->Y = *frame_ycbcr->rc;
-		*frame_lowpassed->Cb = *frame_blur_cb;
-		*frame_lowpassed->Cr = *frame_blur_cr;
-#endif
 
 		gettimeofday(&endtime, NULL);
 		runtime[1] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms   
-
 		dump_frame(frame_lowpassed, "frame_ycbcr_lowpass", frame_number);
 
-#if origptr == true
 		delete frame_ycbcr;
 		delete frame_blur_cb;
 		delete frame_blur_cr;
-
 		Frame *frame_lowpassed_final = NULL;
-#endif
 
-		//Go gpu
 		if (frame_number % i_frame_frequency != 0) {
 			// We have a P frame 
 			// Note that in the first iteration we don't enter this branch!
 
 			//Compute the motion vectors
 			print("Motion Vector Search...");
-
 			gettimeofday(&starttime, NULL);
+
 			motion_vectors = motionVectorSearch(previous_frame_lowpassed, frame_lowpassed, frame_lowpassed->width, frame_lowpassed->height);
+
 			gettimeofday(&endtime, NULL);
 			runtime[2] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
-
+			
 			print("Compute Delta...");
 			gettimeofday(&starttime, NULL);
 
-#if origptr == true
 			frame_lowpassed_final = computeDelta(previous_frame_lowpassed, frame_lowpassed, motion_vectors);
-#else
-			computeDelta(previous_frame_lowpassed, frame_lowpassed, motion_vectors, frame_lowpassed_final);
-#endif
+
 			gettimeofday(&endtime, NULL);
 			runtime[3] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
-
 		}
 		else {
 			// We have a I frame 
 			motion_vectors = NULL;
-#if origptr == true
 			frame_lowpassed_final = DBG_NEW Frame(frame_lowpassed);
-#else
-			*frame_lowpassed_final = *frame_lowpassed;
-#endif
 		}
-#if origptr == true
 		delete frame_lowpassed; frame_lowpassed = NULL;
-#endif
 
 		if (frame_number > 0) delete previous_frame_lowpassed;
 		previous_frame_lowpassed = DBG_NEW Frame(frame_lowpassed_final);
 
-
 		// Downsample the difference
 		print("Downsample...");
-
 		gettimeofday(&starttime, NULL);
 		Frame* frame_downsampled = DBG_NEW Frame(width, height, DOWNSAMPLE);
 
 		// We don't touch the Y frame
 		frame_downsampled->Y->copy(frame_lowpassed_final->Y);
 		Channel* frame_downsampled_cb = downSample(frame_lowpassed_final->Cb);
+
 		frame_downsampled->Cb->copy(frame_downsampled_cb);
 		Channel* frame_downsampled_cr = downSample(frame_lowpassed_final->Cr);
+
 		frame_downsampled->Cr->copy(frame_downsampled_cr);
 		gettimeofday(&endtime, NULL);
 		runtime[4] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
-
 		dump_frame(frame_downsampled, "frame_downsampled", frame_number);
-#if origptr == true
+
 		delete frame_lowpassed_final;
-#endif
 		delete frame_downsampled_cb;
 		delete frame_downsampled_cr;
 
 		// Convert to frequency domain
 		print("Convert to frequency domain...");
-
 		gettimeofday(&starttime, NULL);
 		Frame* frame_dct = DBG_NEW Frame(width, height, DOWNSAMPLE);
 
@@ -615,7 +572,6 @@ int encode() {
 		dct8x8(frame_downsampled->Cr, frame_dct->Cr);
 		gettimeofday(&endtime, NULL);
 		runtime[5] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms 
-
 		dump_frame(frame_dct, "frame_dct", frame_number);
 		delete frame_downsampled;
 
@@ -691,23 +647,11 @@ int encode() {
 		writestats(frame_number, frame_number % i_frame_frequency, runtime);
 
 	}
-#if origptr != true
-	delete frame_rgb;
-	delete frame_lowpassed;
-	delete frame_lowpassed_final;
-
-	delete frame_ycbcr;
-	delete frame_blur_cb;
-	delete frame_blur_cr;
-#endif
 	delete previous_frame_lowpassed;
 
 	closeStats();
 	/* Uncoment to prevent visual studio output window from closing */
 	//system("pause");
-
-	
-
 	return 0;
 }
 

@@ -24,3 +24,27 @@ kernel void convert(global float* in_r, global float* in_g, global float* in_b,
 		j++;
 	}
 }
+
+
+kernel void lowpass(global float* in_channel, global float* out_channel,
+					global int* workload, global int* width, global int* height) {
+	int id = get_global_id(0);
+	int threads = get_global_size(0);
+
+	//Blur weights 
+	float a = 0.25;
+	float b = 0.5;
+	float c = 0.25;
+
+	int work_performed = 0;
+
+	for (int index = id; work_performed < *workload && index < (*width) * (*height) - 1; index += threads) {
+		int row = index / width;
+		int column = index % width;
+
+		if (row > 0 && row < height && column > 0 && column < width)//Would be nice to remove the control statement here if possible
+			out_channel[index] = a * in_channel[(row - 1)*width + column] + b * in->data[row*width + column] + c * in->data[(row + 1)*width + column];
+
+		work_performed++;
+	}
+}
