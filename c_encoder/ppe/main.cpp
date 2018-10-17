@@ -15,8 +15,6 @@
 #include "opencl_helper.h"
 
 
-#define origptr true
-
 using namespace std;
 
 void loadImage(int number, string path, Image** photo) {
@@ -65,7 +63,7 @@ void convertRGBtoYCbCr(Image* in, Image* out) {
 	int width = in->width;
 	int height = in->height;
 
-#pragma omp parallel for num_threads(NUM_THREADS) 
+//#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x++) {
 		for (int y = 0; y<width; y++) {
 			float R = in->rc->data[x*width + y];
@@ -83,6 +81,35 @@ void convertRGBtoYCbCr(Image* in, Image* out) {
 	//return out;
 }
 
+void convertRGBtoYCbCrGPU(cl_kernel *kernel, cl_command_queue *queue, cl_context* context,
+						  cl_mem *in_r_buffer, cl_mem *in_g_buffer, cl_mem *in_b_buffer,
+						  cl_mem *out_r_buffer, cl_mem *out_g_buffer, cl_mem *out_b_buffer,
+						  cl_mem *image_size, cl_mem *thread_workload, size_t* global_dimension) {
+
+	// make in args
+	cl_int err = clSetKernelArg(*kernel, 0, sizeof(*in_r_buffer), in_r_buffer);
+	err = clSetKernelArg(*kernel, 1, sizeof(*in_g_buffer), in_g_buffer);
+
+	err = clSetKernelArg(*kernel, 2, sizeof(*in_b_buffer), in_b_buffer);
+
+	// make out args
+	err = clSetKernelArg(*kernel, 3, sizeof(*out_r_buffer), out_r_buffer);
+	err = clSetKernelArg(*kernel, 4, sizeof(*out_g_buffer), out_g_buffer);
+	err = clSetKernelArg(*kernel, 5, sizeof(*out_b_buffer), out_b_buffer);
+
+	// Pixels per thread arg
+	err = clSetKernelArg(*kernel, 6, sizeof(*thread_workload), thread_workload);
+
+	//Image size arg
+	err = clSetKernelArg(*kernel, 7, sizeof(*image_size), image_size);
+
+	// enqueue kernel
+	clEnqueueNDRangeKernel(*queue, *kernel, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
+
+	clFinish(*queue);
+
+}
+
 //Channel* lowPass(Channel* in, Channel* out) {
 void lowPass(Channel* in, Channel* out) {
 	// Applies a simple 3-tap low-pass filter in the X- and Y- dimensions.
@@ -96,19 +123,19 @@ void lowPass(Channel* in, Channel* out) {
 	int height = in->height;
 
 	//out = in; TODO Is this necessary?
-//#pragma omp parallel for num_threads(NUM_THREADS) 
+////#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<width*height; i++) out->data[i] = in->data[i];
 
 
 	// In X
-//#pragma omp parallel for num_threads(NUM_THREADS) 
+////#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int y = 1; y<(width - 1); y++) {
 		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * in->data[(x - 1)*width + y] + b * in->data[x*width + y] + c * in->data[(x + 1)*width + y];
 		}
 	}
 	// In Y
-//#pragma omp parallel for num_threads(NUM_THREADS) 
+////#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int y = 1; y<(width - 1); y++) {
 		for (int x = 1; x<(height - 1); x++) {
 			out->data[x*width + y] = a * out->data[x*width + (y - 1)] + b * out->data[x*width + y] + c * out->data[x*width + (y + 1)];
@@ -116,6 +143,29 @@ void lowPass(Channel* in, Channel* out) {
 	}
 
 	//return out;
+}
+
+
+/*(global float* in_channel, global float* out_channel,
+	global int* workload, global int* width, global int* height)*/
+void lowPassGPU(cl_kernel* kernel_row, cl_kernel* kernel_col, cl_command_queue *queue, cl_context *context, 
+				cl_mem *buf, cl_mem *low,
+				cl_mem *workload, cl_mem *width, cl_mem *height,
+				size_t* global_dimension) {
+
+	cl_int err = clSetKernelArg(*kernel_row, 0, sizeof(*buf), buf);
+	err = clSetKernelArg(*kernel_row, 1, sizeof(*low), low);
+	clSetKernelArg(*kernel_row, 2, sizeof(*width), width);
+	clSetKernelArg(*kernel_row, 3, sizeof(*height), height);
+	err = clEnqueueNDRangeKernel(*queue, *kernel_row, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
+	clFinish(*queue);
+
+	clSetKernelArg(*kernel_col, 0, sizeof(*low), low);
+	clSetKernelArg(*kernel_col, 1, sizeof(*buf), buf);
+	clSetKernelArg(*kernel_col, 2, sizeof(*width), width);
+	clSetKernelArg(*kernel_col, 3, sizeof(*height), height);
+	err = clEnqueueNDRangeKernel(*queue, *kernel_col, 1, NULL, global_dimension, NULL, 0, NULL, NULL);
+	clFinish(*queue);
 }
 
 std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width, int height) {
@@ -180,12 +230,8 @@ std::vector<mVector>* motionVectorSearch(Frame* source, Frame* match, int width,
 }
 
 
-#if origptr == true
 Frame* computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors) {
 	Frame *delta = DBG_NEW Frame(p_frame_ycbcr);
-#else
-void computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVector>* motion_vectors, Frame* delta) {
-#endif
 
 	int width = i_frame_ycbcr->width;
 	int height = i_frame_ycbcr->height;
@@ -219,7 +265,7 @@ void computeDelta(Frame* i_frame_ycbcr, Frame* p_frame_ycbcr, std::vector<mVecto
 			current_block = current_block + 1;
 		}
 	}
-	//return delta;
+	return delta;
 }
 
 
@@ -250,13 +296,13 @@ void dct8x8(Channel* in, Channel* out) {
 	int height = in->height;
 
 	// 8x8 block dct on each block
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+	//#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<width*height; i++) {
 		in->data[i] -= 128;
 		out->data[i] = 0; //zeros
 	}
 
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+	//#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			dct8x8_block(&(in->data[x*width + y]), &(out->data[x*width + y]), width);
@@ -291,12 +337,12 @@ void quant8x8(Channel* in, Channel* out) {
 	int width = in->width;
 	int height = in->height;
 
-#pragma omp parallel for num_threads(NUM_THREADS)  //TODO - Figure out if this or memcpy is faster
+//#pragme omp parallel for num_threads(NUM_THREADS)  //TODO - Figure out if this or memcpy is faster
 	for (int i = 0; i<width*height; i++) {
 		out->data[i] = 0; //zeros
 	}
 
-#pragma omp parallel for num_threads(NUM_THREADS) 
+//#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int x = 0; x<height; x += 8) {
 		for (int y = 0; y<width; y += 8) {
 			round_block(&(in->data[x*width + y]), &(out->data[x*width + y]), width);
@@ -314,7 +360,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double* dc_values = DBG_NEW double[number_of_dc];
 
 	int iter = 0;
-	//#pragma omp parallel for num_threads(NUM_THREADS) 
+	////#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<height; i += 8) {
 		for (int j = 0; j<width; j += 8) {
 			dc_values_transposed[iter] = in->data[i*width + j];
@@ -331,7 +377,7 @@ void dcDiff(Channel* in, Channel* out) {
 	double prev = 0.;
 	iter = 0;
 
-	//#pragma omp parallel for num_threads(NUM_THREADS) 
+	////#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<new_h; i++) {
 		for (int j = 0; j<new_w; j++) {
 			out->data[iter] = (float)(dc_values[i*new_w + j] - prev);
@@ -386,7 +432,7 @@ void encode8x8(Channel* ordered, SMatrix* encoded, std::string *Z_count) {
 	int num_blocks = height;
 	std::string block_encode[MPEG_CONSTANT] = { "\0" };
 
-	#pragma omp parallel for num_threads(NUM_THREADS) 
+//	//#pragme omp parallel for num_threads(NUM_THREADS) 
 	for (int i = 0; i<num_blocks; i++) {
 		double* block = DBG_NEW double[width];
 		for (int y = 0; y<width; y++) block[y] = ordered->data[i*width + y];
@@ -459,7 +505,8 @@ int encode() {
 	int width = frame_rgb->width;
 	int height = frame_rgb->height;
 	int npixels = width * height;
-	
+	size_t size_bytes = sizeof(float)*npixels;
+
 	delete frame_rgb;
 
 	createStatsFile();
@@ -471,6 +518,54 @@ int encode() {
 	for (int i = 0; i < MPEG_CONSTANT; i++) Z_count[i] = "Z" + std::to_string(i); //Could probably do this compile time
 
 
+	//GPU declaration and initialization//
+	cl_device_id device;
+	cl_context context;
+	cl_command_queue queue;
+	cl_kernel convert_kernel;
+	cl_kernel lowpassrow_kernel;
+	cl_kernel lowpasscol_kernel;
+	cl_program program_cl;
+
+	setup_cl(&device, &context, &queue);
+	compile_kernel(&device, &context, &convert_kernel, &program_cl, "convert");
+	compile_kernel(&device, &context, &lowpassrow_kernel, &program_cl, "lowpassRow");
+	compile_kernel(&device, &context, &lowpasscol_kernel, &program_cl, "lowpassColumn");
+
+	//In buffers
+	cl_mem _buffer_A = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+	cl_mem _buffer_B = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+	cl_mem _buffer_C = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+
+	//Out buffers
+	cl_mem sec_buffer_A = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+	cl_mem sec_buffer_B = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+	cl_mem sec_buffer_C = clCreateBuffer(context, CL_MEM_READ_WRITE, size_bytes, NULL, NULL);
+
+	//Set gpu dimensions and pixels worked per gpu thread
+	int requested_threads = 32 * 96;
+	int dim_size = 0;
+		
+	cl_mem image_width = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(width), NULL, NULL);
+	clEnqueueWriteBuffer(queue, image_width, CL_FALSE, 0, sizeof(int), &width, 0, NULL, NULL);
+	
+	cl_mem image_height = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(height), NULL, NULL);
+	clEnqueueWriteBuffer(queue, image_height, CL_FALSE, 0, sizeof(int), &height, 0, NULL, NULL);
+
+	//Workload
+	height*width > requested_threads ? dim_size = requested_threads : dim_size = height * width;
+	int t_workload = max(ceil(height * width / requested_threads), 1);
+	size_t global_dimension[] = { dim_size, 0, 0 };
+	cl_mem thread_workload = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(t_workload), NULL, NULL);
+	clEnqueueWriteBuffer(queue, thread_workload, CL_FALSE, 0, sizeof(int), &t_workload, 0, NULL, NULL);
+
+
+	//Tell the gpu what the image size is
+	int isize = height * width;
+	cl_mem image_size = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(isize), NULL, NULL);
+	clEnqueueWriteBuffer(queue, image_size, CL_FALSE, 0, sizeof(int), &isize, 0, NULL, NULL);
+
+
 	for (int frame_number = 0; frame_number < end_frame; frame_number++) {
 		frame_rgb = NULL;
 		loadImage(frame_number, image_path, &frame_rgb);//cpu&disk
@@ -480,7 +575,30 @@ int encode() {
 		Image* frame_ycbcr = DBG_NEW Image(width, height, FULLSIZE);
 		gettimeofday(&starttime, NULL);
 
-		convertRGBtoYCbCr(frame_rgb, frame_ycbcr);//Go gpu
+		cl_mem* in_r = &_buffer_A;
+		cl_mem* in_g = &_buffer_B;
+		cl_mem* in_b = &_buffer_C;
+
+		//Write frame to gpu
+		clEnqueueWriteBuffer(queue, *in_r, CL_FALSE, 0, size_bytes, frame_rgb->rc->data, 0, NULL, NULL);
+		clEnqueueWriteBuffer(queue, *in_g, CL_FALSE, 0, size_bytes, frame_rgb->gc->data, 0, NULL, NULL);
+		clEnqueueWriteBuffer(queue, *in_b, CL_FALSE, 0, size_bytes, frame_rgb->bc->data, 0, NULL, NULL);
+
+		cl_mem* buf_y = &sec_buffer_A;
+		cl_mem* buf_cb = &sec_buffer_B;
+		cl_mem* buf_cr = &sec_buffer_C;
+
+		//convertRGBtoYCbCr(frame_rgb, frame_ycbcr);//Go gpu
+		convertRGBtoYCbCrGPU(&convert_kernel, &queue, &context,
+							 in_r, in_g, in_b,
+							 buf_y, buf_cb, buf_cr,
+							 &image_size, &thread_workload, global_dimension);
+
+
+		clEnqueueReadBuffer(queue, *buf_y, CL_FALSE, 0, size_bytes, frame_ycbcr->rc->data, 0, NULL, NULL);
+		clEnqueueReadBuffer(queue, *buf_cb, CL_FALSE, 0, size_bytes, frame_ycbcr->gc->data, 0, NULL, NULL);
+		clEnqueueReadBuffer(queue, *buf_cr, CL_FALSE, 0, size_bytes, frame_ycbcr->bc->data, 0, NULL, NULL);
+		clFinish(queue);
 
 		gettimeofday(&endtime, NULL);
 		runtime[0] = double(endtime.tv_sec)*1000.0f + double(endtime.tv_usec) / 1000.0f - double(starttime.tv_sec)*1000.0f - double(starttime.tv_usec) / 1000.0f; //in ms
@@ -494,8 +612,33 @@ int encode() {
 		Channel* frame_blur_cr = DBG_NEW Channel(width, height);
 		Frame *frame_lowpassed = DBG_NEW Frame(width, height, FULLSIZE);
 
-		lowPass(frame_ycbcr->gc, frame_blur_cb); //Go gpu
-		lowPass(frame_ycbcr->bc, frame_blur_cr); //Go gpu
+		cl_mem* low_cb = &_buffer_B;
+		cl_mem* low_cr = &_buffer_C;
+
+		clEnqueueCopyBuffer(queue, *buf_cb, *low_cb, 0, 0, size_bytes, NULL, NULL, NULL);
+		clFinish(queue);
+
+		//lowPass(frame_ycbcr->gc, frame_blur_cb); //Go gpu
+		lowPassGPU(&lowpassrow_kernel, &lowpasscol_kernel, &queue, &context, buf_cb, low_cb,
+				   &thread_workload, &image_width, &image_height, global_dimension);
+		
+
+		//lowPass(frame_ycbcr->bc, frame_blur_cr); //Go gpu
+		//lowPassGPU(&lowpassrow_kernel, &lowpasscol_kernel, &queue, &context, buf_cr, low_cr,
+		//			&thread_workload, &image_width, &image_height, global_dimension);
+
+
+		cl_int err = clEnqueueReadBuffer(queue, *buf_y, CL_FALSE, 0, size_bytes, frame_ycbcr->rc->data, 0, NULL, NULL);
+		err = clEnqueueReadBuffer(queue, *buf_cb, CL_FALSE, 0, size_bytes, frame_blur_cb->data, 0, NULL, NULL);
+		//err = clEnqueueReadBuffer(queue, *buf_cr, CL_FALSE, 0, size_bytes, frame_blur_cr->data, 0, NULL, NULL);
+		clFinish(queue);
+
+
+		printf("13: %f \n", frame_blur_cb->data[13]);
+		printf("129: %f \n", frame_blur_cb->data[129]);
+		printf("130: %f \n", frame_blur_cb->data[130]);
+		printf("444: %f \n", frame_blur_cb->data[444]);
+		printf("16000: %f \n", frame_blur_cb->data[16000]);
 
 		frame_lowpassed->Y->copy(frame_ycbcr->rc);
 		frame_lowpassed->Cb->copy(frame_blur_cb);

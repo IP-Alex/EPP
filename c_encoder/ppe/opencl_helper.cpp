@@ -80,7 +80,7 @@ char* load_kernel_file(const char* filename) {
 	return kernel_text;
 }
 
-void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel, cl_program* program_cl) {
+void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel, cl_program* program_cl, char* function_name) {
 	cl_int error;
 	char* program_text = load_kernel_file("kernel.cl");
 
@@ -96,7 +96,7 @@ void compile_kernel(cl_device_id* device, cl_context *context, cl_kernel* kernel
 		exit(-1);
 	}
 
-	*kernel = clCreateKernel(*program_cl, "convert", &error);
+	*kernel = clCreateKernel(*program_cl, function_name, &error);
 	if (error != CL_SUCCESS) {
 		printf("[ERROR] - Create kernel failed. Error: %d", error);
 		exit(-1);

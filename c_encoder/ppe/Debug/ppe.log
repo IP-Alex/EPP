@@ -1,5 +1,9 @@
 ﻿  main.cpp
-c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(28): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\opencl_helper.h(27): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(27): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(557): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(557): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(558): warning C4838: conversion from 'int' to 'size_t' requires a narrowing conversion
 LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/PROFILE' specification
 custom_types.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:REF' specification
   ppe.vcxproj -> C:\Users\alla7073\Downloads\Ny\epp\c_encoder\Debug\ppe.exe

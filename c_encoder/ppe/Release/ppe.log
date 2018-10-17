@@ -1,18 +1,14 @@
 ﻿  custom_types.cpp
-  dct8x8_block.cpp
-  gettimeofday.cpp
-  opencl_helper.cpp
-c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\opencl_helper.h(27): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
-c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\opencl_helper.cpp(58): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(208): note: see declaration of 'fopen'
   xml_aux.cpp
   main.cpp
 c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\opencl_helper.h(27): warning C4091: 'typedef ': ignored on left of 'colorchannel' when no variable is declared
 c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(29): warning C4477: 'fprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(553): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(553): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(554): warning C4838: conversion from 'int' to 'size_t' requires a narrowing conversion
   Generating code
-c:\users\alla7073\downloads\ny\epp\c_encoder\ppe\main.cpp(223): warning C4715: 'computeDelta': not all control paths return a value
-  10 of 336 functions ( 3.0%) were compiled, the rest were copied from previous compilation.
-    1 functions were new in current compilation
-    6 functions had inline decision re-evaluated but remain unchanged
+  10 of 339 functions ( 2.9%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   ppe.vcxproj -> C:\Users\alla7073\Downloads\Ny\epp\c_encoder\Release\ppe.exe

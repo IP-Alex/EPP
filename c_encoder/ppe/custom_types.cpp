@@ -33,7 +33,7 @@ Channel::Channel(Channel* in){
 	for(int i=0; i<npixels; i++)
 		data[i] = in->data[i];
 }
-
+/*
 Channel::Channel(Channel& in) {
 	width = in.width;
 	height = in.height;
@@ -76,7 +76,7 @@ Channel& Channel::operator=(Channel&& rhs) {
 	return *this;
 }
 
-
+*/
 Channel::~Channel(){
 	if(data != nullptr)
 		delete[] data;
@@ -89,7 +89,6 @@ void Channel::copy(Channel* ch){
 	this->width = ch->width;
 	this->height = ch->height;
 	
-#pragma omp parallel for num_threads(NUM_THREADS)
 	for(int i=0; i<npixels; i++)
 		this->data[i] = ch->data[i];
 }
@@ -151,6 +150,7 @@ Frame::Frame(Frame* in){
 }
 
 
+/*
 Frame::Frame(Frame& in) {
 	width = in.width;
 	height = in.height;
@@ -160,7 +160,6 @@ Frame::Frame(Frame& in) {
 	Cb = DBG_NEW Channel(in.Cb);
 	Cr = DBG_NEW Channel(in.Cr);
 }
-
 
 Frame::Frame(Frame&& in) {
 	width = in.width;
@@ -205,6 +204,7 @@ Frame& Frame::operator=(Frame&& rhs) {
 	//printf("Move Assign Frame\n");
 	return *this;
 }
+*/
 
 Frame::~Frame(){
 	if (Y != nullptr) {

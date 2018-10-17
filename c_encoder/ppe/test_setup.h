@@ -2,7 +2,7 @@
 #define test_setup_h
 
 // Comment this line for profiling settings
-//#define USE_MATLAB false
+#define USE_MATLAB false
 
 //
 // Use these settings for comparing with MATLAB output
